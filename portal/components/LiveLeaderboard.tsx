@@ -8,7 +8,7 @@ interface Row {
   cumulative_delta: number;
   matches_played: number;
   bot_id: string;
-  bots: { bot_name: string; user_id: string; users: { display_name: string } };
+  bots: { bot_name: string; user_id: string; users: { display_name: string } | { display_name: string }[] } | { bot_name: string; user_id: string; users: { display_name: string } | { display_name: string }[] }[];
 }
 
 interface Props {
@@ -43,7 +43,7 @@ export default function LiveLeaderboard({ initialRows, tournamentId, myBotId }: 
             .order("rank", { ascending: true })
             .limit(100);
           if (data) {
-            setRows(data as Row[]);
+            setRows(data as unknown as Row[]);
             setUpdated(true);
             setTimeout(() => setUpdated(false), 2000);
           }
@@ -91,7 +91,7 @@ export default function LiveLeaderboard({ initialRows, tournamentId, myBotId }: 
                 </span>
               </div>
               <div className="col-span-5 flex items-center gap-2">
-                <span className="text-sm font-medium text-white">{row.bots?.bot_name}</span>
+                <span className="text-sm font-medium text-white">{Array.isArray(row.bots) ? row.bots[0]?.bot_name : (row.bots as any)?.bot_name}</span>
                 {isMe && (
                   <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
                     you
@@ -99,7 +99,11 @@ export default function LiveLeaderboard({ initialRows, tournamentId, myBotId }: 
                 )}
               </div>
               <div className="col-span-3 text-xs text-[#555]">
-                {row.bots?.users?.display_name}
+                {(() => {
+                  const b = Array.isArray(row.bots) ? row.bots[0] : row.bots as any;
+                  const u = Array.isArray(b?.users) ? b?.users[0] : b?.users;
+                  return u?.display_name;
+                })()}
               </div>
               <div className={`col-span-2 text-right text-sm font-mono font-medium ${
                 row.cumulative_delta >= 0 ? "text-green-400" : "text-red-400"
