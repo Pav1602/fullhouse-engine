@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="text-center mb-10">
           <div className="text-4xl mb-4">♠</div>
           <h1 className="text-2xl font-bold text-white">Fullhouse Portal</h1>
-          <p className="text-sm text-[#666] mt-1">1 June 2026 · One Canada Square · London</p>
+          <p className="text-sm text-[#666] mt-1">1 June 2026 · Online · Finals 5 Jun at UCL East</p>
         </div>
 
         {sent ? (

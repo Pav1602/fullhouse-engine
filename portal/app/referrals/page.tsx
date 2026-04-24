@@ -109,7 +109,7 @@ export default async function ReferralsPage() {
               <div className="space-y-2">
                 <a
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                    `Building a poker bot for Fullhouse Hackathon 🃏 Join me at One Canada Square London on 1 June 2026 — £3,000 prize pool. Use my link: ${referralLink}`
+                    `Building a poker bot for Fullhouse Hackathon 🃏 Compete online on 1 June 2026, finals in person at UCL East on 5 June — £4,000 prize pool. Use my link: ${referralLink}`
                   )}`}
                   target="_blank"
                   rel="noreferrer"

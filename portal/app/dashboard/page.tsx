@@ -37,7 +37,7 @@ export default async function DashboardPage() {
             Welcome back, {displayName.split(" ")[0]} 👋
           </h1>
           <p className="text-[#666] text-sm mt-1">
-            Fullhouse Hackathon · 1 June 2026 · One Canada Square, London
+            Fullhouse Hackathon · 1 June 2026 · Online qualifier
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export default async function DashboardPage() {
             <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-5">
               <p className="text-xs text-[#666] uppercase tracking-wide mb-3">Event</p>
               <div className="text-2xl font-bold text-white mb-1">1 June 2026</div>
-              <p className="text-xs text-[#555]">One Canada Square, London</p>
+              <p className="text-xs text-[#555]">Online · Finals 5 Jun at UCL East</p>
               <div className="mt-4 pt-4 border-t border-[#1e1e1e]">
                 <div className="flex justify-between text-xs text-[#555] mb-2">
                   <span>Prize pool</span>
