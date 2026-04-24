@@ -23,7 +23,7 @@ export default async function ReferralsPage() {
     referrals = data ?? [];
   }
 
-  const referralLink = `https://fullhousehackathon.com?ref=${reg?.referral_code ?? ""}`;
+  const referralLink = `https://tally.so/r/b5OREg?ref=${reg?.referral_code ?? ""}`;
 
   return (
     <>

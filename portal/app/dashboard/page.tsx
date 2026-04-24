@@ -179,7 +179,7 @@ export default async function DashboardPage() {
               <div className="bg-[#0f1a0f] border border-[#1a3a1a] rounded-xl p-5">
                 <p className="text-xs text-[#4a9a4a] uppercase tracking-wide mb-3">Your referral link</p>
                 <code className="text-xs text-[#4a9a4a] break-all">
-                  fullhousehackathon.com?ref={reg.referral_code}
+                  tally.so/r/b5OREg?ref={reg.referral_code}
                 </code>
                 <a
                   href="/referrals"
