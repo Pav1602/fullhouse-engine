@@ -125,7 +125,7 @@ export default async function DashboardPage() {
               <div className="mt-4 pt-4 border-t border-[#1e1e1e]">
                 <div className="flex justify-between text-xs text-[#555] mb-2">
                   <span>Prize pool</span>
-                  <span className="text-white font-medium">£3,000</span>
+                  <span className="text-white font-medium">£4,000</span>
                 </div>
                 <div className="flex justify-between text-xs text-[#555]">
                   <span>Lead sponsor</span>
@@ -139,9 +139,9 @@ export default async function DashboardPage() {
               <p className="text-xs text-[#666] uppercase tracking-wide mb-4">Tournament</p>
               <div className="space-y-3">
                 {[
-                  { day: "Day 1", desc: "Swiss qualifier · top 32 advance" },
-                  { day: "Day 2", desc: "Patch window · update your bot" },
-                  { day: "Day 3", desc: "Live-streamed bracket finale" },
+                  { day: "1 Jun", desc: "Swiss qualifier · top 32 advance" },
+                  { day: "2 Jun", desc: "Patch window · update your bot" },
+                  { day: "5 Jun", desc: "Finals night · UCL East · £4,000 prize" },
                 ].map(({ day, desc }) => (
                   <div key={day} className="flex gap-3">
                     <span className="text-xs text-[#444] w-10 pt-0.5 shrink-0">{day}</span>
