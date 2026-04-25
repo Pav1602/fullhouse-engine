@@ -18,7 +18,7 @@ export default async function LeaderboardPage() {
   if (tournament) {
     const { data } = await supabase
       .from("leaderboard")
-      .select("rank, cumulative_delta, matches_played, bot_id, bots(bot_name, user_id, users(display_name))")
+      .select("rank, cumulative_delta, matches_played, bot_id, bots(bot_name, user_id, users(display_name, avatar_key, hat_key))")
       .eq("tournament_id", tournament.id)
       .order("rank", { ascending: true })
       .limit(100);

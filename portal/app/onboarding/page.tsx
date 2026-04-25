@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { CharacterPickerForCurrentUser } from "@/components/CharacterPicker";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -25,7 +26,6 @@ export default function OnboardingPage() {
 
     if (error) { setError(error.message); setLoading(false); return; }
 
-    // Pre-create empty bot record
     if (botName.trim()) {
       await supabase.from("bots").upsert({
         user_id:      user.id,
@@ -39,8 +39,8 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <main className="min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-xl">
         <div className="text-center mb-10">
           <div className="text-4xl mb-4">♠</div>
           <h1 className="text-2xl font-bold text-white">Welcome to Fullhouse</h1>
@@ -79,6 +79,12 @@ export default function OnboardingPage() {
               />
               <p className="text-xs text-[#444] mt-1.5">2–32 characters. This is how your bot appears on the leaderboard.</p>
             </div>
+
+            {/* Character picker — pixel robot + hat */}
+            <div className="pt-2">
+              <CharacterPickerForCurrentUser />
+            </div>
+
             {error && (
               <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
                 {error}
