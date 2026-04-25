@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { SUBMISSIONS_OPEN, SUBMISSIONS_OPEN_DATE_LABEL } from "@/lib/portal-state";
 
 interface Props {
   userId: string;
@@ -17,6 +18,43 @@ export default function BotUploader({ userId, existingBot }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Submissions are gated by a feature flag in portal-state.ts.
+  if (!SUBMISSIONS_OPEN) {
+    return (
+      <div className="rounded-xl border border-[#1e1e1e] bg-[#0a0a0a] p-8 text-center">
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#1e1e1e] text-[#666]">
+          {/* lock glyph */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h3 className="text-base font-semibold text-white">Submissions open in {SUBMISSIONS_OPEN_DATE_LABEL}</h3>
+        <p className="mt-2 text-sm text-[#888] max-w-sm mx-auto">
+          Bot uploads aren&apos;t live yet. We&apos;ll email everyone the moment the portal opens — until then, take a look at the engine README and the reference bots so you&apos;re ready.
+        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <a
+            href="https://github.com/uzlez/fullhouse-engine"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-[#888] hover:text-white border border-[#2a2a2a] hover:border-[#444] rounded-full px-3 py-1.5 transition-colors"
+          >
+            Engine README ↗
+          </a>
+          <a
+            href="https://github.com/uzlez/fullhouse-engine/blob/main/bots/template/bot.py"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-[#888] hover:text-white border border-[#2a2a2a] hover:border-[#444] rounded-full px-3 py-1.5 transition-colors"
+          >
+            Bot template ↗
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -39,14 +77,12 @@ export default function BotUploader({ userId, existingBot }: Props) {
       const version  = (existingBot?.version ?? 0) + 1;
       const path     = `${userId}/bot_v${version}.py`;
 
-      // Upload to Supabase Storage
       const { error: uploadErr } = await supabase.storage
         .from("bots")
         .upload(path, file, { upsert: true, contentType: "text/plain" });
 
       if (uploadErr) throw new Error(uploadErr.message);
 
-      // Upsert bot record
       const { error: dbErr } = await supabase.from("bots").upsert({
         ...(existingBot?.id ? { id: existingBot.id } : {}),
         user_id:      userId,
@@ -72,7 +108,6 @@ export default function BotUploader({ userId, existingBot }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Bot name */}
       {!existingBot && (
         <div>
           <label className="block text-xs text-[#666] mb-1.5 uppercase tracking-wide">
@@ -90,7 +125,6 @@ export default function BotUploader({ userId, existingBot }: Props) {
         </div>
       )}
 
-      {/* File drop zone */}
       <div
         onClick={() => fileRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${

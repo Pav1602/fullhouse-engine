@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import NavBar from "@/components/NavBar";
 import BotUploader from "@/components/BotUploader";
+import { CharacterPickerForCurrentUser } from "@/components/CharacterPicker";
+import { SUBMISSIONS_OPEN, SUBMISSIONS_OPEN_DATE_LABEL, FINALISTS } from "@/lib/portal-state";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -10,8 +12,8 @@ export default async function DashboardPage() {
 
   const [{ data: profile }, { data: bot }, { data: reg }] = await Promise.all([
     supabase.from("users").select("display_name").eq("id", user.id).single(),
-    supabase.from("bots").select("*").eq("user_id", user.id).single(),
-    supabase.from("registrations").select("referral_code, referred_by").eq("email", user.email!).single(),
+    supabase.from("bots").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("registrations").select("referral_code, referred_by").eq("email", user.email!).maybeSingle(),
   ]);
 
   const displayName = profile?.display_name ?? user.email!;
@@ -31,7 +33,6 @@ export default async function DashboardPage() {
       <NavBar displayName={displayName} />
       <main className="max-w-5xl mx-auto px-4 py-10">
 
-        {/* Header */}
         <div className="mb-10">
           <h1 className="text-2xl font-bold text-white">
             Welcome back, {displayName.split(" ")[0]} 👋
@@ -43,11 +44,18 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Bot submission — main card */}
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Current bot status */}
-            {bot && (
+            {/* Character picker */}
+            <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-6">
+              <h2 className="text-base font-semibold text-white mb-1">Your character</h2>
+              <p className="text-sm text-[#666] mb-5">
+                Pick a robot and a hat — shown next to your bot on the leaderboard and match replays. Saves automatically.
+              </p>
+              <CharacterPickerForCurrentUser />
+            </div>
+
+            {bot && bot.storage_path && (
               <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -77,23 +85,21 @@ export default async function DashboardPage() {
               </div>
             )}
 
-            {/* Upload new bot */}
             <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-6">
               <h2 className="text-base font-semibold text-white mb-1">
-                {bot ? "Update your bot" : "Submit your bot"}
+                {SUBMISSIONS_OPEN ? (bot?.storage_path ? "Update your bot" : "Submit your bot") : "Bot submissions"}
               </h2>
               <p className="text-sm text-[#666] mb-6">
-                Upload a single <code className="text-[#888] bg-[#1a1a1a] px-1.5 py-0.5 rounded text-xs">bot.py</code> file.
-                It must contain a <code className="text-[#888] bg-[#1a1a1a] px-1.5 py-0.5 rounded text-xs">decide(state)</code> function.
-                Validation runs automatically.
+                {SUBMISSIONS_OPEN
+                  ? <>Upload a single <code className="text-[#888] bg-[#1a1a1a] px-1.5 py-0.5 rounded text-xs">bot.py</code> file. It must contain a <code className="text-[#888] bg-[#1a1a1a] px-1.5 py-0.5 rounded text-xs">decide(state)</code> function. Validation runs automatically.</>
+                  : <>The submission window opens in {SUBMISSIONS_OPEN_DATE_LABEL}. We&apos;ll email everyone the moment it&apos;s live.</>}
               </p>
               <BotUploader
                 userId={user.id}
-                existingBot={bot ?? undefined}
+                existingBot={bot && bot.storage_path ? bot : undefined}
               />
             </div>
 
-            {/* Rules */}
             <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6">
               <h3 className="text-sm font-semibold text-white mb-3">Submission rules</h3>
               <ul className="space-y-2 text-sm text-[#666]">
@@ -114,10 +120,8 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
 
-            {/* Event countdown */}
             <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-5">
               <p className="text-xs text-[#666] uppercase tracking-wide mb-3">Event</p>
               <div className="text-2xl font-bold text-white mb-1">1 June 2026</div>
@@ -134,12 +138,11 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Tournament format */}
             <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-5">
               <p className="text-xs text-[#666] uppercase tracking-wide mb-4">Tournament</p>
               <div className="space-y-3">
                 {[
-                  { day: "1 Jun", desc: "Swiss qualifier · top 32 advance" },
+                  { day: "1 Jun", desc: `Swiss qualifier · top ${FINALISTS} advance` },
                   { day: "2 Jun", desc: "Patch window · update your bot" },
                   { day: "5 Jun", desc: "Finals night · UCL East · £4,000 prize" },
                 ].map(({ day, desc }) => (
@@ -151,7 +154,6 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Quick links */}
             <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-5">
               <p className="text-xs text-[#666] uppercase tracking-wide mb-3">Resources</p>
               <div className="space-y-2">
@@ -174,7 +176,6 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Referral code */}
             {reg?.referral_code && (
               <div className="bg-[#0f1a0f] border border-[#1a3a1a] rounded-xl p-5">
                 <p className="text-xs text-[#4a9a4a] uppercase tracking-wide mb-3">Your referral link</p>
