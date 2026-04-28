@@ -2,6 +2,9 @@
 Fullhouse Bot Runner — executes inside the Docker sandbox.
 Loads /bot/bot.py, reads game states from stdin, writes actions to stdout.
 All communication is newline-delimited JSON.
+
+LOCAL PATCH: SIGALRM is Unix-only. On Windows we shim it out for dev.
+Prod runs on Linux Docker where the original behaviour applies.
 """
 
 import sys
@@ -13,6 +16,18 @@ import os
 
 BOT_PATH = os.environ.get("BOT_PATH", "/bot/bot.py")
 TIMEOUT  = int(os.environ.get("ACTION_TIMEOUT", "2"))
+
+# Windows compatibility shim ----------------------------------------------
+IS_WINDOWS = os.name == "nt"
+if IS_WINDOWS:
+    class _SigShim:
+        SIGALRM = 14
+        @staticmethod
+        def signal(*a, **k): pass
+        @staticmethod
+        def alarm(*a, **k): pass
+    signal = _SigShim()  # shadow real module; all signal.* calls become no-ops
+# -------------------------------------------------------------------------
 
 
 def load_bot(path: str):
