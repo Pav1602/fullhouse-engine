@@ -4,10 +4,8 @@ Bot pool registry.
     load_pool(include_heldout=False) -> {bot_id: absolute_bot_path}
     validate_pool(pool)              -> raises FileNotFoundError if any path missing
 
-Training pool  (default): 4 reference bots + 1 archetype = 5 opponents
-Full pool      (include_heldout=True): + 5 heldout = 10 opponents
-
-SKANTBOT3_PATH: absolute path to bots/skantbot3/bot (1).py (space in name).
+Training pool  (default): 4 reference bots + 6 archetypes + 7 LLM bots = 17 opponents
+Full pool      (include_heldout=True): + 5 heldout LLM bots = 22 opponents
 """
 
 from pathlib import Path
@@ -38,31 +36,46 @@ _ARCHETYPES_TRAIN = {
 }
 
 # ---------------------------------------------------------------------------
+# LLM-generated bots kept in the TRAINING pool
+# ---------------------------------------------------------------------------
+_LLM_GENERATED_TRAIN = {
+    "chatgpt-2": str(_HERE / "llm_generated" / "chatgpt-2" / "bot.py"),
+    "chatgpt-7": str(_HERE / "llm_generated" / "chatgpt-7" / "bot.py"),
+    "claude-4":  str(_HERE / "llm_generated" / "claude-4" / "bot.py"),
+    "deepseek-5": str(_HERE / "llm_generated" / "deepseek-5" / "bot.py"),
+    "gemini-1":  str(_HERE / "llm_generated" / "gemini-1" / "bot.py"),
+    "gemini-6":  str(_HERE / "llm_generated" / "gemini-6" / "bot.py"),
+    "grok-3":    str(_HERE / "llm_generated" / "grok-3" / "bot.py"),
+}
+
+# ---------------------------------------------------------------------------
 # Heldout bots — NEVER used in Optuna sweeps, only for final validation
 # ---------------------------------------------------------------------------
-# NOTE: The held-out set will be populated purely with 5 randomly chosen
-# LLM-generated bots once they are created.
-_HELDOUT = {}
+_HELDOUT = {
+    "chatgpt-12": str(_HERE / "llm_generated" / "chatgpt-12" / "bot.py"),
+    "claude-9":   str(_HERE / "llm_generated" / "claude-9" / "bot.py"),
+    "deepseek-10": str(_HERE / "llm_generated" / "deepseek-10" / "bot.py"),
+    "gemini-11":  str(_HERE / "llm_generated" / "gemini-11" / "bot.py"),
+    "grok-8":     str(_HERE / "llm_generated" / "grok-8" / "bot.py"),
+}
 
 # ---------------------------------------------------------------------------
-# Convenience: absolute path to skantbot3 (filename has a space)
+# Convenience: absolute path to skantbot4 (latest bot)
 # ---------------------------------------------------------------------------
-SKANTBOT3_PATH = str(_REPO_ROOT / "bots" / "skantbot3" / "bot (1).py")
+SKANTBOT4_PATH = str(_REPO_ROOT / "bots" / "skantbot4" / "bot.py")
 
-# Path to the importlib shim (space-free wrapper around skantbot3)
-SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot_tunable" / "bot.py")
+# Path to the dev bot for sweeps (with env loading)
+SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot_dev" / "bot.py")
 
 
 def load_pool(include_heldout: bool = False) -> dict:
     """
     Return {bot_id: absolute_path} for the evaluation pool.
-
-    Default (include_heldout=False): 4 reference + 1 archetype = 5 training opponents.
-    With include_heldout=True:       + 5 heldout bots = 10 total.
     """
     pool = {}
     pool.update(_REFERENCE)
     pool.update(_ARCHETYPES_TRAIN)
+    pool.update(_LLM_GENERATED_TRAIN)
     if include_heldout:
         pool.update(_HELDOUT)
     return pool

@@ -1,5 +1,5 @@
 """
-Baseline analysis: skantbot3 (default config) vs the full training pool.
+Baseline analysis: skantbot4 (default config) vs the full training pool.
 
 Usage:
     python3 harness/baseline.py [options]
@@ -15,7 +15,7 @@ Output:
     Sorted per-opponent table printed to stdout.
     JSON saved to harness/results/baseline_<timestamp>.json
 
-The baseline uses compare(skant, skant, pool) so a_mean gives skantbot3's
+The baseline uses compare(skant, skant, pool) so a_mean gives skantbot4's
 absolute chip delta position-balanced — paired_diff is always ~0 when A≡B.
 """
 
@@ -43,7 +43,7 @@ def run_baseline(
     save:      bool = True,
 ) -> dict:
     """
-    Run skantbot3 (default config) against the training pool.
+    Run skantbot4 (default config) against the training pool.
 
     Returns the compare() output dict.
     Prints a per-opponent breakdown sorted by chip delta (best first).
@@ -53,12 +53,12 @@ def run_baseline(
     validate_pool(pool)
 
     total_matches = len(pool) * n_seeds * 4
-    print(f"=== Baseline: skantbot3 (default config) ===")
+    print(f"=== Baseline: skantbot4 (default config) ===")
     print(f"Opponents : {', '.join(pool.keys())}")
     print(f"Seeds     : {n_seeds}  |  Hands/match: {n_hands}  |  Workers: {n_workers}")
     print(f"Total matches: {total_matches}\n")
 
-    # compare(A, A, pool) → a_mean is skantbot3's absolute chip delta
+    # compare(A, A, pool) → a_mean is skantbot4's absolute chip delta
     results = compare(
         bot_a_path=SKANTBOT_TUNABLE_PATH,
         bot_b_path=SKANTBOT_TUNABLE_PATH,
@@ -98,7 +98,7 @@ def run_baseline(
 
 if __name__ == "__main__":
     import argparse
-    p = argparse.ArgumentParser(description="Baseline: skantbot3 vs training pool")
+    p = argparse.ArgumentParser(description="Baseline: skantbot4 vs training pool")
     p.add_argument("--seeds",   type=int, default=100)
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--hands",   type=int, default=200)

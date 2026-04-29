@@ -78,8 +78,8 @@ RANK_IDX = {r: i for i, r in enumerate(RANKS)}
 class Config:
     # --- Preflop tightness offsets ---
     # Multiplied into raise frequencies. 1.0 = chart values, >1 = looser.
-    rfi_tightness: float = 1.0
-    threebet_tightness: float = 1.0
+    rfi_tightness: float = 1.9772312784941932
+    threebet_tightness: float = 1.0812162377931829
     fourbet_tightness: float = 1.0
 
     # --- Position-specific aggression multipliers ---
@@ -96,33 +96,33 @@ class Config:
     # against the reference field. Optuna can find the right curve per opponent pool.
     stack_full_threshold_bb: float = 80.0
     stack_short_threshold_bb: float = 30.0
-    stack_short_tightness: float = 1.0
+    stack_short_tightness: float = 0.8916579225780299
 
     # --- Field-shrink widening (4-handed and below) ---
     # When n_active < 6, we widen ranges proportionally toward HU.
     # widening_factor = 1.0 + shrink_widening_factor * (6 - n_active)
-    shrink_widening_factor: float = 0.10
+    shrink_widening_factor: float = 0.007932580342631584
 
     # --- Cold-start caution ---
     # Adds to call thresholds when we don't have enough hands on opponent.
     # Default 0 (off) - exposed for Optuna to tune. Setting >0 makes us
     # tighter when calling against unknowns, but can leak EV by missing calls.
-    cold_start_caution: float = 0.0
+    cold_start_caution: float = 0.0018720542176221822
     cold_start_threshold_hands: int = 6
 
     # --- Postflop equity thresholds ---
-    equity_value_bet: float = 0.62        # bet for value above this
+    equity_value_bet: float = 0.6740177302852788        # bet for value above this
     equity_thin_value: float = 0.52       # thin value-bet IP only
-    equity_call_threshold: float = 0.42   # marginal call threshold
-    equity_raise_threshold: float = 0.72  # raise instead of just call
-    pot_odds_buffer_normal: float = 0.08  # extra equity required vs pot odds
+    equity_call_threshold: float = 0.38342142839260795   # marginal call threshold
+    equity_raise_threshold: float = 0.8495708965415008  # raise instead of just call
+    pot_odds_buffer_normal: float = 0.13607920701450416  # extra equity required vs pot odds
     pot_odds_buffer_marginal: float = 0.20 # how much pot we'll call vs marginal eq
 
     # --- Stack preservation guard ---
     # When facing a bet, the % of stack at risk triggers different thresholds.
     stack_risk_high_threshold: float = 0.30        # 30%+ risk = high
     stack_risk_medium_threshold: float = 0.15      # 15-30% risk = medium
-    stack_risk_high_eq_normal: float = 0.72        # equity needed if high risk, normal opp
+    stack_risk_high_eq_normal: float = 0.8459030248663396        # equity needed if high risk, normal opp
     stack_risk_high_eq_maniac: float = 0.78        # equity needed if high risk, vs maniac
     stack_risk_med_eq_normal: float = 0.58
     stack_risk_med_eq_maniac: float = 0.65
@@ -134,27 +134,27 @@ class Config:
     threebet_call_threshold_pct: float = 0.15      # cap on calling raises with weaker hands
 
     # --- C-bet (continuation bet) ---
-    cbet_freq_dry: float = 0.75
-    cbet_freq_wet: float = 0.50
-    cbet_size_pct: float = 0.50
+    cbet_freq_dry: float = 0.9358692693202256
+    cbet_freq_wet: float = 0.6716197465830757
+    cbet_size_pct: float = 0.4145203230726352
     # Multiway penalty: cbet_freq *= cbet_multiway_penalty ^ (n_opp - 1).
     # Default 0.75 = mild penalty (cbet 56% of normal vs 2 opps, 42% vs 3 opps).
     # Optuna can tune lower if pool tends to be sticky multiway.
-    cbet_multiway_penalty: float = 0.75
+    cbet_multiway_penalty: float = 0.7315205960619435
 
     # --- Bluff frequencies ---
-    bluff_freq_ip: float = 0.20
-    bluff_freq_oop: float = 0.10
+    bluff_freq_ip: float = 0.1736942650413865
+    bluff_freq_oop: float = 0.021676882062283895
     fourbet_bluff_freq: float = 0.30
 
     # --- Bet sizing presets (fractions of pot) ---
-    sizing_value: float = 0.66
+    sizing_value: float = 0.8821516803299079
     sizing_polarised: float = 1.00
     sizing_thin: float = 0.40
 
     # --- Preflop sizing multipliers ---
-    open_size_bb: float = 2.5
-    threebet_size_ip: float = 3.5
+    open_size_bb: float = 2.2300394772233996
+    threebet_size_ip: float = 4.404393108107567
     threebet_size_oop: float = 4.0
     fourbet_size_ip: float = 2.3
     fourbet_size_oop: float = 2.5
@@ -164,10 +164,10 @@ class Config:
     min_hands_for_exploit: int = 25
     fold_to_3bet_exploit_threshold: float = 0.70
     maniac_min_sample: int = 6
-    maniac_vpip_threshold: float = 0.50
+    maniac_vpip_threshold: float = 0.5273385541287454
     maniac_pfr_threshold: float = 0.40
     station_min_sample: int = 8
-    station_vpip_threshold: float = 0.45
+    station_vpip_threshold: float = 0.35404883602998494
     station_pfr_threshold: float = 0.15
 
     # --- Time/sim budget ---

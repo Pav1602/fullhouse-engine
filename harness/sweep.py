@@ -1,5 +1,5 @@
 """
-Optuna TPE multi-objective sweep to tune skantbot3 Config parameters.
+Optuna TPE multi-objective sweep to tune skantbot4 Config parameters.
 
 Only run this AFTER:
   1. Phases 1-3 are verified (baseline runs cleanly)
@@ -21,7 +21,7 @@ Usage:
     python3 harness/sweep.py --trials 2000 --seeds 50 --workers 8
 
     # Resume an interrupted sweep
-    python3 harness/sweep.py --trials 2000 --seeds 50 --resume --study-name skantbot3_sweep
+    python3 harness/sweep.py --trials 2000 --seeds 50 --resume --study-name skantbot4_sweep
 """
 
 import sys
@@ -83,7 +83,7 @@ def _evaluate_params(
     n_hands: int,
     n_workers: int,
 ) -> dict:
-    """Run skantbot3 with trial_params against pool. Returns compare() dict."""
+    """Run skantbot4 with trial_params against pool. Returns compare() dict."""
     from harness.match_runner import compare
 
     env_overrides = {
@@ -210,7 +210,7 @@ def run_sweep(
     n_hands:     int  = 200,
     n_workers:   int  = 8,
     batch_size:  int  = 10,
-    study_name:  str  = "skantbot3_sweep",
+    study_name:  str  = "skantbot4_sweep",
     storage:     str  = None,
     resume:      bool = False,
 ) -> "optuna.Study":
@@ -284,14 +284,14 @@ def run_sweep(
 
 if __name__ == "__main__":
     import argparse
-    p = argparse.ArgumentParser(description="Optuna sweep for skantbot3")
+    p = argparse.ArgumentParser(description="Optuna sweep for skantbot4")
     p.add_argument("--trials",      type=int, default=2000)
     p.add_argument("--seeds",       type=int, default=50)
     p.add_argument("--hands",       type=int, default=200)
     p.add_argument("--workers",     type=int, default=8)
     p.add_argument("--batch-size",  type=int, default=10,
                    help="Seeds per pruning batch (default: 10)")
-    p.add_argument("--study-name",  default="skantbot3_sweep")
+    p.add_argument("--study-name",  default="skantbot4_sweep")
     p.add_argument("--storage",     default=None,
                    help="SQLite URL (default: harness/results/sweep_<name>.db)")
     p.add_argument("--resume",      action="store_true",

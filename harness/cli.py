@@ -15,7 +15,7 @@ Examples:
     # Compare skantbot3 vs skantbot2 against training pool
     python3 -m harness.cli compare \\
         harness/skantbot_tunable/bot.py \\
-        bots/skantbot2/bot.py \\
+        bots/skantbot3/bot (1).py \\
         --seeds 50 --workers 8
 
     # A-vs-A acceptance test (paired_diff_mean must be 0.0)
