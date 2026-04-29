@@ -27,22 +27,22 @@ _REFERENCE = {
 
 # ---------------------------------------------------------------------------
 # Archetype bots kept in the TRAINING pool
-# (archetypes excluded from training are in _HELDOUT)
 # ---------------------------------------------------------------------------
 _ARCHETYPES_TRAIN = {
+    "all_in_monkey":   str(_HERE / "archetypes" / "all_in_monkey" / "bot.py"),
     "calling_station": str(_HERE / "archetypes" / "calling_station" / "bot.py"),
+    "limp_machine":    str(_HERE / "archetypes" / "limp_machine" / "bot.py"),
+    "min_raiser":      str(_HERE / "archetypes" / "min_raiser" / "bot.py"),
+    "super_nit":       str(_HERE / "archetypes" / "super_nit" / "bot.py"),
+    "uniform_random":  str(_HERE / "archetypes" / "uniform_random" / "bot.py"),
 }
 
 # ---------------------------------------------------------------------------
 # Heldout bots — NEVER used in Optuna sweeps, only for final validation
 # ---------------------------------------------------------------------------
-_HELDOUT = {
-    "heldout_all_in_monkey":  str(_HERE / "heldout" / "all_in_monkey"  / "bot.py"),
-    "heldout_super_nit":      str(_HERE / "heldout" / "super_nit"      / "bot.py"),
-    "heldout_min_raiser":     str(_HERE / "heldout" / "min_raiser"     / "bot.py"),
-    "heldout_limp_machine":   str(_HERE / "heldout" / "limp_machine"   / "bot.py"),
-    "heldout_uniform_random": str(_HERE / "heldout" / "uniform_random" / "bot.py"),
-}
+# NOTE: The held-out set will be populated purely with 5 randomly chosen
+# LLM-generated bots once they are created.
+_HELDOUT = {}
 
 # ---------------------------------------------------------------------------
 # Convenience: absolute path to skantbot3 (filename has a space)

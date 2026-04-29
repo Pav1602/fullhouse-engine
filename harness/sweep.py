@@ -36,17 +36,19 @@ _RESULTS_DIR = Path(__file__).parent / "results"
 
 # ---------------------------------------------------------------------------
 # Parameter search space
-# (MC sim counts, sizing presets, and opp-model thresholds excluded from v1)
+# (MC sim counts, sizing presets excluded from v1)
 # ---------------------------------------------------------------------------
 PARAM_SPACE = {
     # Preflop tightness
     "rfi_tightness":            ("float", 0.50, 2.00),
     "threebet_tightness":       ("float", 0.50, 2.00),
+    "stack_short_tightness":    ("float", 0.30, 1.00),
     # Postflop equity thresholds
     "equity_value_bet":         ("float", 0.50, 0.75),
     "equity_call_threshold":    ("float", 0.30, 0.55),
     "equity_raise_threshold":   ("float", 0.60, 0.85),
     "pot_odds_buffer_normal":   ("float", 0.00, 0.20),
+    "cold_start_caution":       ("float", 0.00, 0.20),
     # C-bet
     "cbet_freq_dry":            ("float", 0.40, 1.00),
     "cbet_freq_wet":            ("float", 0.25, 0.80),
@@ -55,6 +57,9 @@ PARAM_SPACE = {
     # Bluff frequencies
     "bluff_freq_ip":            ("float", 0.05, 0.45),
     "bluff_freq_oop":           ("float", 0.02, 0.30),
+    # Opponent Modeling Triggers
+    "maniac_vpip_threshold":    ("float", 0.40, 0.70),
+    "station_vpip_threshold":   ("float", 0.35, 0.60),
     # Sizing
     "sizing_value":             ("float", 0.40, 1.00),
     "open_size_bb":             ("float", 2.00, 4.00),
