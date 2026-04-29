@@ -1,0 +1,53 @@
+{
+  "timestamp": "20260429_155731",
+  "n_seeds": 10,
+  "n_hands": 100,
+  "bot_path": "/home/gsgill/Projects/Poker-bot/fullhouse-engine/harness/skantbot_tunable/bot.py",
+  "results": {
+    "aggressor": {
+      "a_mean": 0.0,
+      "a_stderr": 1490.7119849998599,
+      "b_mean": -2000.0,
+      "b_stderr": 2000.0,
+      "paired_diff_mean": 2000.0,
+      "paired_diff_stderr": 1333.333333333333,
+      "n": 10
+    },
+    "mathematician": {
+      "a_mean": 3556.5,
+      "a_stderr": 184.17390634337366,
+      "b_mean": 3626.1,
+      "b_stderr": 200.4186978414051,
+      "paired_diff_mean": -69.6,
+      "paired_diff_stderr": 99.233417310456,
+      "n": 10
+    },
+    "ref_bot_2": {
+      "a_mean": 3515.5,
+      "a_stderr": 233.9212236820098,
+      "b_mean": 3569.1,
+      "b_stderr": 165.56143203589951,
+      "paired_diff_mean": -53.6,
+      "paired_diff_stderr": 110.60673075762112,
+      "n": 10
+    },
+    "shark": {
+      "a_mean": 4542.5,
+      "a_stderr": 189.8116756741329,
+      "b_mean": 4542.5,
+      "b_stderr": 189.8116756741329,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 10
+    },
+    "calling_station": {
+      "a_mean": 9000.0,
+      "a_stderr": 1000.0,
+      "b_mean": 9000.0,
+      "b_stderr": 1000.0,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 10
+    }
+  }
+}

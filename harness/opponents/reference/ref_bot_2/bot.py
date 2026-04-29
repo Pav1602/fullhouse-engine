@@ -1,0 +1,1 @@
+../../../../bots/ref_bot_2/bot.py

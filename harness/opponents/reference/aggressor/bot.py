@@ -1,0 +1,1 @@
+../../../../bots/aggressor/bot.py
