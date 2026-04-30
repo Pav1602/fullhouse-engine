@@ -94,6 +94,7 @@ def compare(
     n_hands: int = 200,
     env_overrides: dict = None, # {"SKANT_RFI_TIGHTNESS": "1.2", ...}
     seed_offset: int = 0,       # first actual seed = seed_offset + 0
+    show_progress: bool = False,
 ) -> dict:
     """
     Compare bot_a vs bot_b against every opponent in opponent_pool using CRN.
@@ -174,7 +175,11 @@ def compare(
 
     # Run all tasks in parallel
     with Pool(processes=n_workers) as pool:
-        results = pool.map(_run_one_match, tasks)
+        if show_progress:
+            import tqdm
+            results = list(tqdm.tqdm(pool.imap(_run_one_match, tasks), total=len(tasks), desc="Matches"))
+        else:
+            results = pool.map(_run_one_match, tasks)
 
     # Aggregate per-seed deltas: opp_id -> local_i -> config_key -> chip_delta
     raw: dict = {}

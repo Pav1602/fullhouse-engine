@@ -1,0 +1,161 @@
+{
+  "timestamp": "20260430_211200",
+  "n_seeds": 100,
+  "n_hands": 200,
+  "bot_path": "/home/gsgill/Projects/Poker-bot/fullhouse-engine/harness/skantbot_dev/bot.py",
+  "results": {
+    "aggressor": {
+      "a_mean": -1100.0,
+      "a_stderr": 665.0738547884981,
+      "b_mean": -1100.0,
+      "b_stderr": 665.0738547884981,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "mathematician": {
+      "a_mean": 7311.26,
+      "a_stderr": 104.59997452536531,
+      "b_mean": 7311.26,
+      "b_stderr": 104.59997452536531,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "ref_bot_2": {
+      "a_mean": 7287.39,
+      "a_stderr": 94.55705764513324,
+      "b_mean": 7287.39,
+      "b_stderr": 94.55705764513324,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "shark": {
+      "a_mean": 8954.0,
+      "a_stderr": 118.81821273175117,
+      "b_mean": 8954.0,
+      "b_stderr": 118.81821273175117,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "all_in_monkey": {
+      "a_mean": 1900.0,
+      "a_stderr": 646.5916857498308,
+      "b_mean": 1900.0,
+      "b_stderr": 646.5916857498308,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "calling_station": {
+      "a_mean": 9700.0,
+      "a_stderr": 171.44660799776528,
+      "b_mean": 9700.0,
+      "b_stderr": 171.44660799776528,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "limp_machine": {
+      "a_mean": 9700.0,
+      "a_stderr": 171.44660799776528,
+      "b_mean": 9700.0,
+      "b_stderr": 171.44660799776528,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "min_raiser": {
+      "a_mean": -9042.84,
+      "a_stderr": 298.3461337088012,
+      "b_mean": -9042.84,
+      "b_stderr": 298.3461337088012,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "super_nit": {
+      "a_mean": 9341.25,
+      "a_stderr": 136.2106096336393,
+      "b_mean": 9341.25,
+      "b_stderr": 136.2106096336393,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "uniform_random": {
+      "a_mean": 7195.41,
+      "a_stderr": 398.9062296068988,
+      "b_mean": 7195.41,
+      "b_stderr": 398.9062296068988,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "chatgpt-2": {
+      "a_mean": 3281.21,
+      "a_stderr": 552.368920379315,
+      "b_mean": 3281.21,
+      "b_stderr": 552.368920379315,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "chatgpt-7": {
+      "a_mean": 5599.495,
+      "a_stderr": 262.38943929450136,
+      "b_mean": 5599.495,
+      "b_stderr": 262.38943929450136,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "claude-4": {
+      "a_mean": 6885.855,
+      "a_stderr": 158.63793989615144,
+      "b_mean": 6885.855,
+      "b_stderr": 158.63793989615144,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "deepseek-5": {
+      "a_mean": 4846.05,
+      "a_stderr": 261.67013995957706,
+      "b_mean": 4846.05,
+      "b_stderr": 261.67013995957706,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "gemini-1": {
+      "a_mean": 7093.975,
+      "a_stderr": 188.6568964135527,
+      "b_mean": 7093.975,
+      "b_stderr": 188.6568964135527,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "gemini-6": {
+      "a_mean": 8437.505,
+      "a_stderr": 195.35709901641943,
+      "b_mean": 8437.505,
+      "b_stderr": 195.35709901641943,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    },
+    "grok-3": {
+      "a_mean": 9964.25,
+      "a_stderr": 8.251530314144919,
+      "b_mean": 9964.25,
+      "b_stderr": 8.251530314144919,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 100
+    }
+  }
+}

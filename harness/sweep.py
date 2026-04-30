@@ -267,7 +267,18 @@ def run_sweep(
         print(f"{t.number:>6} {t.values[0]:>+12.1f} {t.values[1]:>+12.1f}")
 
     # Save best config (highest mean_perf from Pareto front)
-    best = max(pareto, key=lambda t: t.values[0])
+    best = None
+    robust_trials = [t for t in pareto if t.values[1] > -2000]
+    if robust_trials:
+        best = max(robust_trials, key=lambda t: t.values[0])
+    else:
+        print("Warning: No Pareto trial survived worst_perf > -2000. Relaxing to -5000.")
+        robust_trials = [t for t in pareto if t.values[1] > -5000]
+        if robust_trials:
+            best = max(robust_trials, key=lambda t: t.values[0])
+        else:
+            print("Warning: No trial survived worst_perf > -5000. Falling back to max mean.")
+            best = max(pareto, key=lambda t: t.values[0])
     best_path = _RESULTS_DIR / f"best_params_{study_name}.json"
     best_path.write_text(json.dumps({
         "trial_number": best.number,

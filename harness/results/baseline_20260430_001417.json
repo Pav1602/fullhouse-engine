@@ -1,0 +1,161 @@
+{
+  "timestamp": "20260430_001417",
+  "n_seeds": 50,
+  "n_hands": 200,
+  "bot_path": "/home/gsgill/Projects/Poker-bot/fullhouse-engine/harness/skantbot_dev/bot.py",
+  "results": {
+    "aggressor": {
+      "a_mean": -1000.0,
+      "a_stderr": 958.3148474999098,
+      "b_mean": -1000.0,
+      "b_stderr": 958.3148474999098,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "mathematician": {
+      "a_mean": 7151.06,
+      "a_stderr": 129.48741459607382,
+      "b_mean": 7151.06,
+      "b_stderr": 129.48741459607382,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "ref_bot_2": {
+      "a_mean": 7120.4,
+      "a_stderr": 128.90030002656616,
+      "b_mean": 7120.4,
+      "b_stderr": 128.90030002656616,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "shark": {
+      "a_mean": 8709.0,
+      "a_stderr": 173.67539508273143,
+      "b_mean": 8709.0,
+      "b_stderr": 173.67539508273143,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "all_in_monkey": {
+      "a_mean": 3200.0,
+      "a_stderr": 779.3246683991918,
+      "b_mean": 3200.0,
+      "b_stderr": 779.3246683991918,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "calling_station": {
+      "a_mean": 9400.0,
+      "a_stderr": 339.26691677251193,
+      "b_mean": 9400.0,
+      "b_stderr": 339.26691677251193,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "limp_machine": {
+      "a_mean": 9400.0,
+      "a_stderr": 339.26691677251193,
+      "b_mean": 9400.0,
+      "b_stderr": 339.26691677251193,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "min_raiser": {
+      "a_mean": -8837.88,
+      "a_stderr": 450.9315035907474,
+      "b_mean": -8837.88,
+      "b_stderr": 450.9315035907474,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "super_nit": {
+      "a_mean": 9025.5,
+      "a_stderr": 232.04227491329846,
+      "b_mean": 9025.5,
+      "b_stderr": 232.04227491329846,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "uniform_random": {
+      "a_mean": 7804.67,
+      "a_stderr": 500.18781444206184,
+      "b_mean": 7804.67,
+      "b_stderr": 500.18781444206184,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "chatgpt-2": {
+      "a_mean": 4456.39,
+      "a_stderr": 803.1978991265006,
+      "b_mean": 4456.39,
+      "b_stderr": 803.1978991265006,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "chatgpt-7": {
+      "a_mean": 5498.02,
+      "a_stderr": 420.92073517226396,
+      "b_mean": 5498.02,
+      "b_stderr": 420.92073517226396,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "claude-4": {
+      "a_mean": 6590.81,
+      "a_stderr": 254.3632746442676,
+      "b_mean": 6590.81,
+      "b_stderr": 254.3632746442676,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "deepseek-5": {
+      "a_mean": 5064.17,
+      "a_stderr": 403.46386673052007,
+      "b_mean": 5064.17,
+      "b_stderr": 403.46386673052007,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "gemini-1": {
+      "a_mean": 6797.08,
+      "a_stderr": 279.79406543574373,
+      "b_mean": 6797.08,
+      "b_stderr": 279.79406543574373,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "gemini-6": {
+      "a_mean": 8439.53,
+      "a_stderr": 267.0759852933396,
+      "b_mean": 8439.53,
+      "b_stderr": 267.0759852933396,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    },
+    "grok-3": {
+      "a_mean": 9971.5,
+      "a_stderr": 8.571726185309371,
+      "b_mean": 9971.5,
+      "b_stderr": 8.571726185309371,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 50
+    }
+  }
+}

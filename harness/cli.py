@@ -57,6 +57,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
         n_seeds=args.seeds,
         n_workers=args.workers,
         n_hands=args.hands,
+        show_progress=True,
     )
 
     # --- formatted table ---

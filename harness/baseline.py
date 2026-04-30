@@ -41,19 +41,24 @@ def run_baseline(
     n_workers: int  = 8,
     n_hands:   int  = 200,
     save:      bool = True,
+    pool:      dict = None,
+    pool_name: str  = "training pool"
 ) -> dict:
     """
-    Run skantbot4 (default config) against the training pool.
+    Run skantbot4 (default config) against the specified pool.
 
     Returns the compare() output dict.
     Prints a per-opponent breakdown sorted by chip delta (best first).
     Saves to harness/results/baseline_<timestamp>.json when save=True.
     """
-    pool = load_pool(include_heldout=False)
+    if pool is None:
+        pool = load_pool(include_heldout=False)
+    
     validate_pool(pool)
 
     total_matches = len(pool) * n_seeds * 4
     print(f"=== Baseline: skantbot4 (default config) ===")
+    print(f"Pool      : {pool_name}")
     print(f"Opponents : {', '.join(pool.keys())}")
     print(f"Seeds     : {n_seeds}  |  Hands/match: {n_hands}  |  Workers: {n_workers}")
     print(f"Total matches: {total_matches}\n")
@@ -66,6 +71,7 @@ def run_baseline(
         n_seeds=n_seeds,
         n_workers=n_workers,
         n_hands=n_hands,
+        show_progress=True,
     )
 
     # Print sorted table (best opponents first)
@@ -103,6 +109,19 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--hands",   type=int, default=200)
     p.add_argument("--no-save", action="store_true")
+    p.add_argument("--heldout", action="store_true", help="Run against the heldout pool only")
     args = p.parse_args()
+
+    if args.heldout:
+        pool = load_pool(include_heldout=True)
+        # Filter to only the heldout bots
+        from harness.opponents.registry import _HELDOUT
+        pool = {k: v for k, v in pool.items() if k in _HELDOUT}
+        pool_name = "heldout pool"
+    else:
+        pool = load_pool(include_heldout=False)
+        pool_name = "training pool"
+
     run_baseline(n_seeds=args.seeds, n_workers=args.workers,
-                 n_hands=args.hands, save=not args.no_save)
+                 n_hands=args.hands, save=not args.no_save,
+                 pool=pool, pool_name=pool_name)

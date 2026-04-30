@@ -1,0 +1,161 @@
+{
+  "timestamp": "20260429_233504",
+  "n_seeds": 20,
+  "n_hands": 200,
+  "bot_path": "/home/gsgill/Projects/Poker-bot/fullhouse-engine/harness/skantbot_dev/bot.py",
+  "results": {
+    "aggressor": {
+      "a_mean": -1500.0,
+      "a_stderr": 1666.228012450182,
+      "b_mean": -1500.0,
+      "b_stderr": 1666.228012450182,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "mathematician": {
+      "a_mean": 6921.25,
+      "a_stderr": 203.87137166412188,
+      "b_mean": 6921.25,
+      "b_stderr": 203.87137166412188,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "ref_bot_2": {
+      "a_mean": 7093.75,
+      "a_stderr": 214.889162066597,
+      "b_mean": 7093.75,
+      "b_stderr": 214.889162066597,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "shark": {
+      "a_mean": 8657.5,
+      "a_stderr": 303.4402525079777,
+      "b_mean": 8657.5,
+      "b_stderr": 303.4402525079777,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "all_in_monkey": {
+      "a_mean": 3000.0,
+      "a_stderr": 1277.3327473170102,
+      "b_mean": 3000.0,
+      "b_stderr": 1277.3327473170102,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "calling_station": {
+      "a_mean": 9500.0,
+      "a_stderr": 500.0,
+      "b_mean": 9500.0,
+      "b_stderr": 500.0,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "limp_machine": {
+      "a_mean": 9500.0,
+      "a_stderr": 500.0,
+      "b_mean": 9500.0,
+      "b_stderr": 500.0,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "min_raiser": {
+      "a_mean": -9500.0,
+      "a_stderr": 500.0,
+      "b_mean": -9500.0,
+      "b_stderr": 500.0,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "super_nit": {
+      "a_mean": 8805.0,
+      "a_stderr": 474.5725223265338,
+      "b_mean": 8805.0,
+      "b_stderr": 474.5725223265338,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "uniform_random": {
+      "a_mean": 7365.225,
+      "a_stderr": 923.8760016444164,
+      "b_mean": 7365.225,
+      "b_stderr": 923.8760016444164,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "chatgpt-2": {
+      "a_mean": 5071.075,
+      "a_stderr": 1309.4062677588086,
+      "b_mean": 5071.075,
+      "b_stderr": 1309.4062677588086,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "chatgpt-7": {
+      "a_mean": 6519.5,
+      "a_stderr": 787.2666747076642,
+      "b_mean": 6519.5,
+      "b_stderr": 787.2666747076642,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "claude-4": {
+      "a_mean": 6553.375,
+      "a_stderr": 314.4127920153611,
+      "b_mean": 6553.375,
+      "b_stderr": 314.4127920153611,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "deepseek-5": {
+      "a_mean": 5037.625,
+      "a_stderr": 558.4898126986363,
+      "b_mean": 5037.625,
+      "b_stderr": 558.4898126986363,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "gemini-1": {
+      "a_mean": 7350.1,
+      "a_stderr": 331.3221671139023,
+      "b_mean": 7350.1,
+      "b_stderr": 331.3221671139023,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "gemini-6": {
+      "a_mean": 8311.775,
+      "a_stderr": 419.5646372557228,
+      "b_mean": 8311.775,
+      "b_stderr": 419.5646372557228,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    },
+    "grok-3": {
+      "a_mean": 9966.25,
+      "a_stderr": 14.653340736393258,
+      "b_mean": 9966.25,
+      "b_stderr": 14.653340736393258,
+      "paired_diff_mean": 0.0,
+      "paired_diff_stderr": 0.0,
+      "n": 20
+    }
+  }
+}
