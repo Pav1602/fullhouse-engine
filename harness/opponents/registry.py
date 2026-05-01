@@ -29,9 +29,7 @@ _REFERENCE = {
 _ARCHETYPES_TRAIN = {
     "all_in_monkey":   str(_HERE / "archetypes" / "all_in_monkey" / "bot.py"),
     "calling_station": str(_HERE / "archetypes" / "calling_station" / "bot.py"),
-    "limp_machine":    str(_HERE / "archetypes" / "limp_machine" / "bot.py"),
     "min_raiser":      str(_HERE / "archetypes" / "min_raiser" / "bot.py"),
-    "super_nit":       str(_HERE / "archetypes" / "super_nit" / "bot.py"),
     "uniform_random":  str(_HERE / "archetypes" / "uniform_random" / "bot.py"),
 }
 
