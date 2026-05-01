@@ -57,6 +57,8 @@ _HELDOUT = {
     "deepseek-10": str(_HERE / "llm_generated" / "deepseek-10" / "bot.py"),
     "gemini-11":  str(_HERE / "llm_generated" / "gemini-11" / "bot.py"),
     "grok-8":     str(_HERE / "llm_generated" / "grok-8" / "bot.py"),
+    "limp_machine": str(_HERE / "archetypes" / "limp_machine" / "bot.py"),
+    "super_nit":   str(_HERE / "archetypes" / "super_nit" / "bot.py"),
 }
 
 # ---------------------------------------------------------------------------

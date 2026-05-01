@@ -266,19 +266,17 @@ def run_sweep(
     for t in sorted(pareto, key=lambda t: -t.values[0]):
         print(f"{t.number:>6} {t.values[0]:>+12.1f} {t.values[1]:>+12.1f}")
 
-    # Save best config (highest mean_perf from Pareto front)
-    best = None
-    robust_trials = [t for t in pareto if t.values[1] > -2000]
-    if robust_trials:
-        best = max(robust_trials, key=lambda t: t.values[0])
-    else:
-        print("Warning: No Pareto trial survived worst_perf > -2000. Relaxing to -5000.")
-        robust_trials = [t for t in pareto if t.values[1] > -5000]
-        if robust_trials:
-            best = max(robust_trials, key=lambda t: t.values[0])
-        else:
-            print("Warning: No trial survived worst_perf > -5000. Falling back to max mean.")
-            best = max(pareto, key=lambda t: t.values[0])
+    # Save best config (hard floor on worst performance)
+    worst_floor = -3000
+    survivors = [t for t in pareto if t.values[1] >= worst_floor]
+    if not survivors:
+        best_worst = max(t.values[1] for t in pareto) if pareto else float('-inf')
+        raise ValueError(
+            f"No trial achieved worst_perf >= {worst_floor}. "
+            f"Best worst_perf was {best_worst:.1f}. "
+            f"Either lower the floor, fix the strategy structure, or extend the sweep."
+        )
+    best = max(survivors, key=lambda t: t.values[0])
     best_path = _RESULTS_DIR / f"best_params_{study_name}.json"
     best_path.write_text(json.dumps({
         "trial_number": best.number,
