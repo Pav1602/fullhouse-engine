@@ -20,13 +20,16 @@ app = Flask(__name__)
 # State (in-memory for demo)
 # ---------------------------------------------------------------------------
 
+from harness.opponents.registry import SKANTBOT4_PATH, SKANTBOT_TUNABLE_PATH, load_pool
+_pool = load_pool(include_heldout=True)
+
 BOT_PATHS = {
-    "The Aggressor":    "bots/aggressor/bot.py",
-    "The Mathematician":"bots/mathematician/bot.py",
-    "The Shark":        "bots/shark/bot.py",
-    "Template Bot A":   "bots/template/bot.py",
-    "Pot-Odds Bot B":   "bots/ref_bot_2/bot.py",
-    "Template Bot C":   "bots/template/bot.py",
+    "Skantbot 4":       SKANTBOT4_PATH,
+    "Skantbot Tunable": SKANTBOT_TUNABLE_PATH,
+    "Grok 3 (LLM)":     _pool["grok-3"],
+    "Claude 4 (LLM)":   _pool["claude-4"],
+    "Min Raiser":       _pool.get("min_raiser", "harness/opponents/archetypes/min_raiser/bot.py"),
+    "The Shark":        _pool["shark"],
 }
 
 state = {
@@ -189,6 +192,7 @@ async function runTournament() {
   const res = await fetch('/run/tournament', { method: 'POST' });
   const data = await res.json();
   updateBoard(data.standings);
+  updateReplay(data.hands);
   document.getElementById('round-label').textContent =
     `Round ${data.round} complete — ${data.finalists} finalists selected`;
   setRunning(false);
@@ -223,12 +227,12 @@ function updateReplay(hands) {
   el.innerHTML = '';
   document.getElementById('hand-count').textContent = `(${hands.length} hands)`;
 
-  // Show last 20 hands
-  const show = hands.slice(-20).reverse();
+  // Show all hands, newest first
+  const show = [...hands].reverse();
   show.forEach(h => {
-    const r = h.result;
+    const r = h;
     const winner = r.winners?.map(w => w.bot_id).join(', ') || '?';
-    const community = r.community_cards?.join(' ') || '—';
+    const community = r.community_cards && r.community_cards.length > 0 ? r.community_cards.join(' ') : '—';
     const actions = (r.action_log || [])
       .filter(a => !['small_blind','big_blind'].includes(a.action))
       .slice(-6);
@@ -328,7 +332,7 @@ def run_tournament():
         emit(f"=== ROUND {rnd} ===", "bold")
 
         standings_for_pairing = computeStandings(all_results) if all_results else bot_list
-        tables = swiss_pairing(standings_for_pairing, table_size=min(6, len(bot_list)))
+        tables = swissPairing(standings_for_pairing, table_size=min(6, len(bot_list)))
 
         emit(f"  {len(tables)} table(s) this round", "dim")
 
@@ -339,6 +343,9 @@ def run_tournament():
             emit(f"  Table {t_idx+1}: {', '.join(bot_paths_for_match.keys())}", "dim")
 
             result = run_match(match_id, bot_paths_for_match, n_hands=150)
+            
+            # Save the hands of the last match to show in the UI
+            state["hands"] = result.get("hands", [])
 
             for bid, delta in result["chip_delta"].items():
                 all_results.append({

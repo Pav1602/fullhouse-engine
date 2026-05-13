@@ -65,7 +65,7 @@ _HELDOUT = {
 SKANTBOT4_PATH = str(_REPO_ROOT / "bots" / "skantbot4" / "bot.py")
 
 # Path to the dev bot for sweeps (with env loading)
-SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot_dev" / "bot.py")
+SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot6_dev" / "bot.py")
 
 
 def load_pool(include_heldout: bool = False) -> dict:

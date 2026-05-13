@@ -39,37 +39,97 @@ _RESULTS_DIR = Path(__file__).parent / "results"
 # (MC sim counts, sizing presets excluded from v1)
 # ---------------------------------------------------------------------------
 PARAM_SPACE = {
-    # Preflop tightness
-    "rfi_tightness":            ("float", 0.50, 2.00),
-    "threebet_tightness":       ("float", 0.50, 2.00),
-    "stack_short_tightness":    ("float", 0.30, 1.00),
-    # Postflop equity thresholds
-    "equity_value_bet":         ("float", 0.50, 0.75),
-    "equity_call_threshold":    ("float", 0.30, 0.55),
-    "equity_raise_threshold":   ("float", 0.60, 0.85),
-    "pot_odds_buffer_normal":   ("float", 0.00, 0.20),
-    "cold_start_caution":       ("float", 0.00, 0.20),
-    # C-bet
-    "cbet_freq_dry":            ("float", 0.40, 1.00),
-    "cbet_freq_wet":            ("float", 0.25, 0.80),
-    "cbet_size_pct":            ("float", 0.30, 0.80),
-    "cbet_multiway_penalty":    ("float", 0.40, 1.00),
-    # Bluff frequencies
-    "bluff_freq_ip":            ("float", 0.05, 0.45),
-    "bluff_freq_oop":           ("float", 0.02, 0.30),
-    # Opponent Modeling Triggers
-    "maniac_vpip_threshold":    ("float", 0.40, 0.70),
-    "station_vpip_threshold":   ("float", 0.35, 0.60),
-    # Sizing
-    "sizing_value":             ("float", 0.40, 1.00),
-    "open_size_bb":             ("float", 2.00, 4.00),
-    "threebet_size_ip":         ("float", 2.50, 5.00),
-    # Stack preservation
-    "stack_risk_high_eq_normal": ("float", 0.60, 0.85),
-    # Range widening
-    "shrink_widening_factor":   ("float", 0.00, 0.30),
-}
+    # --- Small open defense ---
+    "small_open_threshold_bb": ("float", 2.05, 2.25),
+    "small_open_3bet_boost": ("float", 1.0, 2.0),
+    "small_open_call_boost": ("float", 1.0, 2.5),
 
+    # --- Preflop tightness & multipliers ---
+    "rfi_tightness": ("float", 0.8, 2.2),
+    "threebet_tightness": ("float", 0.8, 2.2),
+    "fourbet_tightness": ("float", 0.8, 1.5),
+    "stack_short_tightness": ("float", 0.7, 1.1),
+    "shrink_widening_factor": ("float", 0.0, 0.05),
+    "cold_start_caution": ("float", 0.0, 0.02),
+
+    # --- Positional aggression multipliers ---
+    "pos_aggression_lj": ("float", 0.8, 1.2),
+    "pos_aggression_hj": ("float", 0.8, 1.2),
+    "pos_aggression_co": ("float", 0.8, 1.2),
+    "pos_aggression_btn": ("float", 0.8, 1.2),
+    "pos_aggression_sb": ("float", 0.8, 1.2),
+    "pos_aggression_bb": ("float", 0.8, 1.2),
+
+    # --- Preflop sizing multipliers ---
+    "open_size_bb": ("float", 2.0, 2.5),
+    "threebet_size_ip": ("float", 2.8, 4.5),
+    "threebet_size_oop": ("float", 3.0, 4.5),
+
+    # --- Postflop equity thresholds ---
+    "equity_value_bet": ("float", 0.55, 0.75),
+    "equity_thin_value": ("float", 0.48, 0.60),
+    "equity_call_threshold": ("float", 0.30, 0.45),
+    "equity_raise_threshold": ("float", 0.75, 0.90),
+    "pot_odds_buffer_normal": ("float", 0.05, 0.20),
+    "pot_odds_buffer_marginal": ("float", 0.10, 0.30),
+
+    # --- Stack preservation & Jam guards ---
+    "stack_risk_high_eq_normal": ("float", 0.75, 0.95),
+    "stack_risk_high_eq_maniac": ("float", 0.65, 0.85),
+    "stack_risk_med_eq_normal": ("float", 0.50, 0.70),
+    "stack_risk_med_eq_maniac": ("float", 0.55, 0.75),
+    "fourbet_commit_threshold": ("float", 0.15, 0.35),
+    "fourbet_call_threshold_pct": ("float", 0.05, 0.25),
+    "threebet_call_threshold_pct": ("float", 0.05, 0.25),
+
+    # --- Bet sizing presets ---
+    "sizing_value": ("float", 0.60, 1.00),
+    "cbet_size_pct": ("float", 0.25, 0.60),
+
+    # --- C-bet & Texture coefficients ---
+    "cbet_freq_base": ("float", 0.65, 0.95),
+    "k_texture_paired": ("float", -0.2, 0.2),
+    "k_texture_monotone": ("float", -0.2, 0.2),
+    "k_texture_connected": ("float", -0.2, 0.2),
+    "k_texture_high_card": ("float", -0.2, 0.2),
+    "cbet_multiway_penalty": ("float", 0.5, 1.0),
+    "spr_commit_threshold": ("float", 2.0, 6.0),
+    "spr_smoothness": ("float", 1.0, 3.0),
+
+    # --- River Aggression & Sizing modifiers ---
+    "river_mdf_aggression": ("float", 0.5, 1.5),
+    "river_v2b_half_pot": ("float", 1.0, 3.0),
+    "river_v2b_pot_sized": ("float", 0.5, 2.0),
+    "river_v2b_overbet": ("float", 0.1, 1.0),
+    "k_river_bluff_blocker": ("float", -0.2, 0.2),
+    "river_value_thin_threshold": ("float", 0.55, 0.70),
+    "river_value_strong_threshold": ("float", 0.75, 0.90),
+    "river_value_thin_size": ("float", 0.30, 0.65),
+    "river_value_strong_size": ("float", 0.70, 1.20),
+
+    # --- Bluffing ---
+    "bluff_freq_ip": ("float", 0.05, 0.35),
+    "bluff_freq_oop": ("float", 0.0, 0.15),
+
+    # --- Match standing & Commitment ---
+    "k_commit": ("float", 0.0, 0.2),
+    "k_standing": ("float", 0.0, 0.5),
+    "standing_alpha": ("float", 0.0, 0.5),
+    "standing_beta": ("float", 0.0, 0.5),
+
+    # --- Counter-exploit modeling & profiles ---
+    "maniac_vpip_threshold": ("float", 0.45, 0.60),
+    "station_vpip_threshold": ("float", 0.30, 0.45),
+    "k_bluff_vs_cbet_folder": ("float", 0.0, 0.5),
+    "k_bluff_vs_2barrel_folder": ("float", 0.0, 0.5),
+    "k_bluff_vs_3barrel_folder": ("float", 0.0, 0.5),
+    "k_bluff_vs_wtsd": ("float", 0.0, 0.5),
+    "k_value_size_vs_station": ("float", 0.0, 0.5),
+    "k_tightness_vs_3bet_freq": ("float", 0.0, 0.5),
+    "k_call_threshold_vs_aggression": ("float", 0.0, 0.5),
+    "k_4bet_vs_3bet_freq": ("float", 0.0, 0.5),
+    "variance_c": ("float", 0.0, 0.5),
+}
 
 # ---------------------------------------------------------------------------
 # Single-trial evaluation (runs compare() with this trial's params)

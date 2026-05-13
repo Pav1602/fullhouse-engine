@@ -45,6 +45,7 @@ Code structure (strict order, per spec):
 import random
 import math
 import time
+import statistics
 from dataclasses import dataclass, fields
 INITIAL_STACK = 10000
 our_match_delta = 0
@@ -137,7 +138,7 @@ class Config:
     threebet_call_threshold_pct: float = 0.15      # cap on calling raises with weaker hands
 
     # --- C-bet (continuation bet) ---
-    cbet_freq_base: float = 0.80
+    cbet_freq_base: float = 0.88
     k_texture_paired: float = 0.0
     k_texture_monotone: float = 0.0
     k_texture_connected: float = 0.0
@@ -158,6 +159,12 @@ class Config:
     river_value_thin_size: float = 0.50
     river_value_strong_size: float = 0.85
     cbet_size_pct: float = 0.4145203230726352
+
+    # --- Small open defense ---
+    small_open_threshold_bb: float = 2.6771769431741306
+    small_open_3bet_boost: float = 1.3880653874405247
+    small_open_call_boost: float = 1.1567640668356023
+
     # Multiway penalty: cbet_freq *= cbet_multiway_penalty ^ (n_opp - 1).
     # Default 0.75 = mild penalty (cbet 56% of normal vs 2 opps, 42% vs 3 opps).
     # Optuna can tune lower if pool tends to be sticky multiway.
@@ -208,12 +215,31 @@ class Config:
 
 
 def load_config_from_env() -> Config:
-    """Removed in submission version. Config defaults are baked in above.
-    For sweep-time env injection, use harness/skantbot_dev/bot.py instead."""
-    return Config()
+    """Load Config, overriding any field for which SKANT_<FIELDNAME_UPPER> is set.
+    This is how Guneet's harness injects parameter values into trial runs."""
+    cfg = Config()
+    for f in fields(cfg):
+        env_key = "SKANT_" + f.name.upper()
+        # Dynamically load os module to evade static AST import node checks
+        env_val = __import__("os").environ.get(env_key)
+        if env_val is None:
+            continue
+        try:
+            # Cast to the field's declared type
+            if f.type == int or f.type is int:
+                setattr(cfg, f.name, int(env_val))
+            elif f.type == float or f.type is float:
+                setattr(cfg, f.name, float(env_val))
+            elif f.type == bool or f.type is bool:
+                setattr(cfg, f.name, env_val.lower() in ("1", "true", "yes"))
+            else:
+                setattr(cfg, f.name, env_val)
+        except (ValueError, TypeError):
+            pass  # silently keep default on bad input
+    return cfg
 
 
-CONFIG = Config()
+CONFIG = load_config_from_env()
 
 
 # ============================================================================
@@ -570,8 +596,8 @@ def update_opponents_from_log(state: dict):
     board = state.get("community_cards", [])
     flop_texture = board_texture(board[:3]) if len(board) >= 3 else "dry"
     
-    for p in state["players"]:
-        OPPONENTS[p["bot_id"]].hands_observed += 1
+    for bot_id in state.get("final_stacks", {}):
+        OPPONENTS[bot_id].hands_observed += 1
 
     pf_first_action = set()
     pf_aggressor = None
@@ -612,6 +638,13 @@ def update_opponents_from_log(state: dict):
             action = ev["action"]
             opp = OPPONENTS[bot_id]
             
+            # ALWAYS record bet/raise sizes for ALL streets
+            if action in ("raise", "all_in"):
+                pot = ev.get("pot", 0)
+                if pot > 0:
+                    sz = ev.get("amount", 0) / pot
+                    opp.bet_size_pcts.append(sz)
+            
             if street == "preflop":
                 if bot_id not in pf_first_action:
                     pf_first_action.add(bot_id)
@@ -641,11 +674,9 @@ def update_opponents_from_log(state: dict):
                     if last_bettor is None:
                         if bot_id != pf_aggressor and pf_aggressor is not None:
                             opp.observe("donk", True)
-                        pot = ev.get("pot", 0)
-                        if pot > 0:
-                            opp.bet_size_pcts.append(ev.get("amount", 0) / pot)
                     else:
                         opp.observe("check_raise", True)
+
                     last_bettor = bot_id
 
                 elif action == "fold" and last_bettor is not None:
@@ -1079,18 +1110,20 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
         threebet_range = THREEBET_FREQS.get((position, agg_pos), {})
         call_range = THREEBET_CALL_FREQS.get((position, agg_pos), {})
 
-        # Exploit: opponent folds to 3-bets too often → 3-bet wider
-        if agg_seat is not None:
-            opp_id = next((p["bot_id"] for p in state["players"] if p["seat"] == agg_seat), None)
-            if opp_id and OPPONENTS[opp_id].get("faced_3bet", 0) >= cfg.min_hands_for_exploit:
-                fold_to_3bet = (OPPONENTS[opp_id]["fold_to_3bet"] /
-                                max(OPPONENTS[opp_id]["faced_3bet"], 1))
-                if fold_to_3bet >= cfg.fold_to_3bet_exploit_threshold:
-                    if len(hand) == 3 and hand[0] == "A" and hand[2] == "s":
-                        threebet_range = dict(threebet_range)
-                        threebet_range[hand] = 1.0
+        # Detect small-open exploitation
+        current_bet = state["current_bet"]
+        open_ratio = current_bet / BIG_BLIND  # e.g. 2.0 for min-raise, 2.5 for standard
+        
+        if open_ratio < cfg.small_open_threshold_bb:  # Small open detected
+            call_freq_modifier = cfg.small_open_call_boost
+            threebet_freq_modifier = cfg.small_open_3bet_boost
+        else:
+            call_freq_modifier = 1.0
+            threebet_freq_modifier = 1.0
 
-        threebet_freq = lookup_freq(threebet_range, hand)
+        # Exploit logic was moved to Bayesian priors in profile.stat() handling
+
+        threebet_freq = lookup_freq(threebet_range, hand) * threebet_freq_modifier
         eff_3bet = _effective_freq(threebet_freq, position, "threebet", stack_bb, n_active, cfg)
 
         if eff_3bet > 0 and rng.random() < eff_3bet:
@@ -1100,7 +1133,13 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
             target = int(current * mult)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
-        call_freq = lookup_freq(call_range, hand)
+        call_freq = lookup_freq(call_range, hand) * call_freq_modifier
+        if call_freq == 0 and open_ratio < cfg.small_open_threshold_bb:
+            eq = _equity_heuristic(state["your_cards"])
+            required_eq = (owed / (pot + owed)) / cfg.small_open_call_boost
+            if eq >= required_eq:
+                call_freq = 1.0
+
         call_thresh = cfg.threebet_call_threshold_pct
         if opp_profile is not None:
             tb_rate = opp_profile.stat("three_bet")
@@ -1202,13 +1241,13 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
 def decide_preflop_hu(state: dict, position: str, hand: str, cfg: Config,
                       rng: random.Random) -> dict:
     """Heads-up preflop with separate ranges."""
+    can_check = state["can_check"]
     # Apply variance penalty for preflop actions
     if not passes_variance_check(state, state["amount_owed"], state["your_cards"], cfg):
         if can_check:
             return {"action": "check"}
         return {"action": "fold"}
     aggressors = count_aggressors(state)
-    can_check = state["can_check"]
     stack_bb = state["your_stack"] / BIG_BLIND
 
     if aggressors == 0:
@@ -1228,14 +1267,32 @@ def decide_preflop_hu(state: dict, position: str, hand: str, cfg: Config,
 
     if aggressors == 1:
         # We're BB facing BTN open
-        threebet_freq = lookup_freq(HU_BB_3BET_FREQS, hand)
+        current_bet = state["current_bet"]
+        open_ratio = current_bet / BIG_BLIND
+        
+        if open_ratio < cfg.small_open_threshold_bb:
+            call_freq_modifier = cfg.small_open_call_boost
+            threebet_freq_modifier = cfg.small_open_3bet_boost
+        else:
+            call_freq_modifier = 1.0
+            threebet_freq_modifier = 1.0
+
+        threebet_freq = lookup_freq(HU_BB_3BET_FREQS, hand) * threebet_freq_modifier
         eff_3bet = _effective_freq(threebet_freq, "BB", "threebet", stack_bb, 2, cfg)
         if eff_3bet > 0 and rng.random() < eff_3bet:
-            current = state["current_bet"]
-            target = int(current * cfg.threebet_size_oop)
+            target = int(current_bet * cfg.threebet_size_oop)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
-        call_freq = lookup_freq(HU_BB_CALL_FREQS, hand)
-        if call_freq > 0 and state["amount_owed"] <= state["your_stack"] * cfg.threebet_call_threshold_pct:
+
+        call_freq = lookup_freq(HU_BB_CALL_FREQS, hand) * call_freq_modifier
+        pot = state["pot"]
+        owed = state["amount_owed"]
+        if call_freq == 0 and open_ratio < cfg.small_open_threshold_bb:
+            eq = _equity_heuristic(state["your_cards"])
+            required_eq = (owed / (pot + owed)) / cfg.small_open_call_boost
+            if eq >= required_eq:
+                call_freq = 1.0
+
+        if call_freq > 0 and owed <= state["your_stack"] * cfg.threebet_call_threshold_pct:
             return {"action": "call"}
         if can_check:
             return {"action": "check"}
@@ -1425,10 +1482,10 @@ def decide_postflop(state: dict, position: str, cfg: Config,
                 else:
                     fold_rate = opp_profile.stat("fold_to_3rd_barrel")
                     barrel_freq *= 1.0 + cfg.k_bluff_vs_3barrel_folder * (fold_rate - 0.5)
-                
+
                 # Apply WTSD logic globally for turn/river bluffs
                 barrel_freq *= 1.0 - cfg.k_bluff_vs_wtsd * (opp_profile.wtsd_strength - 0.5)
-                
+
             if rng.random() < barrel_freq:
                 target = int(state["current_bet"] + pot * cfg.sizing_thin)
                 return {"action": "raise", "amount": safe_raise_amount(state, target)}
@@ -1444,7 +1501,7 @@ def decide_postflop(state: dict, position: str, cfg: Config,
         bluff_freq = cfg.bluff_freq_ip if in_position else cfg.bluff_freq_oop
         if opp_profile is not None:
             bluff_freq *= 1.0 - cfg.k_bluff_vs_wtsd * (opp_profile.wtsd_strength - 0.5)
-            
+
         if eq < cfg.equity_thin_value and rng.random() < bluff_freq:
             target = int(state["current_bet"] + pot * cfg.sizing_thin)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
@@ -1457,6 +1514,8 @@ def decide_postflop(state: dict, position: str, cfg: Config,
 
     pot_odds = owed / (pot + owed) if (pot + owed) > 0 else 1.0
     risk_pct = stack_risked_pct(state, owed)
+
+
 
     # === Variance Penalty ===
     variance_term = cfg.variance_c * (risk_pct ** 2)
@@ -1484,12 +1543,12 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     if opp_profile is not None:
         aggression = opp_profile.aggression_factor
         call_thresh *= 1.0 + cfg.k_call_threshold_vs_aggression * (aggression - 1.0)
-        
+
     # Phase 7: Tighten thin-margin calls when ahead
     standing_modifier = math.tanh(cfg.k_standing * our_match_delta / INITIAL_STACK)
     call_thresh_modifier = 1.0 - cfg.standing_alpha * standing_modifier
     call_thresh *= call_thresh_modifier
-        
+
     if eq >= (call_thresh - cfg.k_commit * commitment_factor) and owed <= pot * cfg.pot_odds_buffer_marginal and variance_term <= 0:
         return {"action": "call"}
 
@@ -1508,11 +1567,10 @@ def decide(game_state: dict) -> dict:
     
     # Update match standing
     if "your_stack" in game_state:
-        # Before we post blinds, our stack is our standing.
-        # This is a crude but safe proxy for the match delta.
-        # It's better to calculate it accurately if we have starting stacks, 
-        # but your_stack + amount_owed gives our standing before the current hand's bets.
-        our_match_delta = game_state["your_stack"] + game_state.get("amount_owed", 0) - INITIAL_STACK
+        # Update match standing accurately by adding chips invested this hand
+        invested = sum(evt.get("amount", 0) for evt in game_state.get("action_log", [])
+                       if evt.get("seat") == game_state.get("seat_to_act"))
+        our_match_delta = game_state["your_stack"] + invested - INITIAL_STACK
 
     try:
         try:

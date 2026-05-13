@@ -200,6 +200,14 @@ def _play_hand(engine: PokerEngine, procs: dict,
             # Should never happen — safety valve
             raise RuntimeError(f"Hand exceeded 1000 steps: {engine.hand_id}")
 
+    # Broadcast final state so bots can record showdowns and track stats!
+    if state.get("type") == "hand_complete":
+        for bot_id in active_bots:
+            try:
+                procs[bot_id].act(state)
+            except Exception:
+                pass
+
     return state
 
 

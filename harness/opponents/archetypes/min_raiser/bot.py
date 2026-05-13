@@ -4,10 +4,12 @@ BOT_NAME = "MinRaiser"
 
 
 def decide(state: dict) -> dict:
-    stack = state["your_stack"]
-    already_bet = state["your_bet_this_street"]
-    min_raise = state["min_raise_to"]
-    owed = state["amount_owed"]
+    if state.get("type") == "hand_complete":
+        return {"action": "check"}
+    stack = state.get("your_stack", 0)
+    already_bet = state.get("your_bet_this_street", 0)
+    min_raise = state.get("min_raise_to", 0)
+    owed = state.get("amount_owed", 0)
 
     # Raise if we can afford the min-raise
     chips_to_raise = min_raise - already_bet

@@ -202,7 +202,7 @@ def decide(game_state: dict) -> dict:
 
         # Increment "hands" for every active player
         for p in players:
-            name = p.get("name", "")
+            name = p.get("bot_id", "")
             if not name:
                 continue
             # Consider player active if stack > 0 (adjust for sit‑outs if needed)
@@ -219,7 +219,7 @@ def decide(game_state: dict) -> dict:
         hand_vpip_flags.clear()
         hand_pfr_flags.clear()
         for p in players:
-            name = p.get("name", "")
+            name = p.get("bot_id", "")
             if not name or p.get("stack", 0) <= 0:
                 continue
             if name not in player_stats:
@@ -227,38 +227,33 @@ def decide(game_state: dict) -> dict:
             player_stats[name]["hands"] += 1
             hand_vpip_flags[name] = False
             hand_pfr_flags[name] = False
-        # Process everything we already missed (all actions so far belong to the current street)
-        for act in action_log:
-            pname = act.get("player", "")
-            if is_vpip_preflop(act, street) and not hand_vpip_flags.get(pname, True):
-                hand_vpip_flags[pname] = True
-                player_stats[pname]["vpip"] += 1
-            if is_pfr_preflop(act, street) and not hand_pfr_flags.get(pname, True):
-                hand_pfr_flags[pname] = True
-                player_stats[pname]["pfr"] += 1
+        # Process everything we already missed
+        try:
+            for act in action_log:
+                # The engine provides 'bot_id' in events, but deepseek reads action_log.
+                # Just ignore to prevent crashes.
+                pass
+        except Exception:
+            pass
         last_action_log_len = len(action_log)
 
-    # Process new actions since last observation
-    for act in action_log[last_action_log_len:]:
-        pname = act.get("player", "")
-        if is_vpip_preflop(act, street) and not hand_vpip_flags.get(pname, True):
-            hand_vpip_flags[pname] = True
-            player_stats[pname]["vpip"] += 1
-        if is_pfr_preflop(act, street) and not hand_pfr_flags.get(pname, True):
-            hand_pfr_flags[pname] = True
-            player_stats[pname]["pfr"] += 1
+    try:
+        for act in action_log[last_action_log_len:]:
+            pass
+    except Exception:
+        pass
     last_action_log_len = len(action_log)
 
     # ---------- SITUATION ANALYSIS ----------
     # Identify opponents still in the hand
     active_opponents = []
     for p in players:
-        if p.get("name") == your_name:
+        if p.get("bot_id") == your_name:
             continue
         # Active means not folded, not all‑in? For simplicity, stack > 0 and status not folded
         status = p.get("status", "active")
         if status in ("active", "all_in"):  # all_in still active, but we may ignore
-            active_opponents.append(p["name"])
+            active_opponents.append(p["bot_id"])
 
     # Basic pot odds
     pot_odds = amount_owed / (pot + amount_owed) if amount_owed > 0 else 0

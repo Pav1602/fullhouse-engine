@@ -80,9 +80,9 @@ def main():
             signal.alarm(0)
             sys.stderr.write("[runner] TIMEOUT\n")
             emit({"action": "fold", "error": "timeout"})
-        except Exception:
+        except Exception as e:
             signal.alarm(0)
-            sys.stderr.write(f"[runner] BOT EXCEPTION:\n{traceback.format_exc()}\n")
+            sys.stderr.write(f"[runner] BOT EXCEPTION: {repr(e)}\n")
             emit({"action": "fold", "error": "exception"})
 
 
