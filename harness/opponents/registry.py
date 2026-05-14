@@ -3,9 +3,6 @@ Bot pool registry.
 
     load_pool(include_heldout=False) -> {bot_id: absolute_bot_path}
     validate_pool(pool)              -> raises FileNotFoundError if any path missing
-
-Training pool  (default): 4 reference bots + 6 archetypes + 7 LLM bots = 17 opponents
-Full pool      (include_heldout=True): + 5 heldout LLM bots = 22 opponents
 """
 
 from pathlib import Path
@@ -47,17 +44,52 @@ _LLM_GENERATED_TRAIN = {
 }
 
 # ---------------------------------------------------------------------------
-# Heldout bots — NEVER used in Optuna sweeps, only for final validation
+# New Opponents added to counter overfitting
+# ---------------------------------------------------------------------------
+_NEW_ARCHETYPES_TRAIN = {
+    "tag_value":     str(_HERE / "archetypes" / "tag_value"     / "bot.py"),
+    "loose_passive": str(_HERE / "archetypes" / "loose_passive" / "bot.py"),
+    "overbet_bot":   str(_HERE / "archetypes" / "overbet_bot"   / "bot.py"),
+    "minbet_bot":    str(_HERE / "archetypes" / "minbet_bot"    / "bot.py"),
+    "push_fold":     str(_HERE / "archetypes" / "push_fold"     / "bot.py"),
+    "donk_bot":      str(_HERE / "archetypes" / "donk_bot"      / "bot.py"),
+}
+
+# Shifted from heldout to training
+_SHIFTED_TO_TRAIN = {
+    "chatgpt-12": str(_HERE / "llm_generated" / "chatgpt-12" / "bot.py"),
+    "gemini-11":  str(_HERE / "llm_generated" / "gemini-11"  / "bot.py"),
+}
+
+# ---------------------------------------------------------------------------
+# Heldout bots
 # ---------------------------------------------------------------------------
 _HELDOUT = {
-    "chatgpt-12": str(_HERE / "llm_generated" / "chatgpt-12" / "bot.py"),
     "claude-9":   str(_HERE / "llm_generated" / "claude-9" / "bot.py"),
     "deepseek-10": str(_HERE / "llm_generated" / "deepseek-10" / "bot.py"),
-    "gemini-11":  str(_HERE / "llm_generated" / "gemini-11" / "bot.py"),
     "grok-8":     str(_HERE / "llm_generated" / "grok-8" / "bot.py"),
     "limp_machine": str(_HERE / "archetypes" / "limp_machine" / "bot.py"),
     "super_nit":   str(_HERE / "archetypes" / "super_nit" / "bot.py"),
 }
+
+_NEW_UNSEEN = {
+    "maniac_aggro": str(_HERE / "archetypes" / "maniac_aggro" / "bot.py"),
+    "fit_or_fold":  str(_HERE / "archetypes" / "fit_or_fold"  / "bot.py"),
+}
+
+# ---------------------------------------------------------------------------
+# Convenience variables to load specific pools
+# ---------------------------------------------------------------------------
+TRAIN_EXPANDED = {}
+TRAIN_EXPANDED.update(_REFERENCE)
+TRAIN_EXPANDED.update(_ARCHETYPES_TRAIN)
+TRAIN_EXPANDED.update(_LLM_GENERATED_TRAIN)
+TRAIN_EXPANDED.update(_NEW_ARCHETYPES_TRAIN)
+TRAIN_EXPANDED.update(_SHIFTED_TO_TRAIN)
+
+UNSEEN_VALIDATION = {}
+UNSEEN_VALIDATION.update(_HELDOUT)
+UNSEEN_VALIDATION.update(_NEW_UNSEEN)
 
 # ---------------------------------------------------------------------------
 # Convenience: absolute path to skantbot4 (latest bot)
@@ -71,13 +103,11 @@ SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot6_dev" / "bot.py")
 def load_pool(include_heldout: bool = False) -> dict:
     """
     Return {bot_id: absolute_path} for the evaluation pool.
+    By default, returns the EXPANDED training pool.
     """
-    pool = {}
-    pool.update(_REFERENCE)
-    pool.update(_ARCHETYPES_TRAIN)
-    pool.update(_LLM_GENERATED_TRAIN)
+    pool = dict(TRAIN_EXPANDED)
     if include_heldout:
-        pool.update(_HELDOUT)
+        pool.update(UNSEEN_VALIDATION)
     return pool
 
 

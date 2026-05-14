@@ -82,9 +82,9 @@ RANK_IDX = {r: i for i, r in enumerate(RANKS)}
 class Config:
     # --- Preflop tightness offsets ---
     # Multiplied into raise frequencies. 1.0 = chart values, >1 = looser.
-    rfi_tightness: float = 1.329390083854736
-    threebet_tightness: float = 1.5088392038469278
-    fourbet_tightness: float = 1.0729625050999838
+    rfi_tightness: float = 2.023082215163377
+    threebet_tightness: float = 0.9389205262640616
+    fourbet_tightness: float = 1.092042750527517
 
     # --- Position-specific aggression multipliers ---
     pos_aggression_lj: float = 1.0
@@ -100,36 +100,36 @@ class Config:
     # against the reference field. Optuna can find the right curve per opponent pool.
     stack_full_threshold_bb: float = 80.0
     stack_short_threshold_bb: float = 30.0
-    stack_short_tightness: float = 1.062755386265622
+    stack_short_tightness: float = 1.0762061840378374
 
     # --- Field-shrink widening (4-handed and below) ---
     # When n_active < 6, we widen ranges proportionally toward HU.
     # widening_factor = 1.0 + shrink_widening_factor * (6 - n_active)
-    shrink_widening_factor: float = 0.021122235570883725
+    shrink_widening_factor: float = 0.026810028607063694
 
     # --- Cold-start caution ---
     # Adds to call thresholds when we don't have enough hands on opponent.
     # Default 0 (off) - exposed for Optuna to tune. Setting >0 makes us
     # tighter when calling against unknowns, but can leak EV by missing calls.
-    cold_start_caution: float = 0.00503444876997189
+    cold_start_caution: float = 0.002449632443842318
     cold_start_threshold_hands: int = 6
 
     # --- Postflop equity thresholds ---
-    equity_value_bet: float = 0.6745356704432989        # bet for value above this
-    equity_thin_value: float = 0.5112243173035931       # thin value-bet IP only
-    equity_call_threshold: float = 0.35145192425809546   # marginal call threshold
-    equity_raise_threshold: float = 0.8285403468316638  # raise instead of just call
-    pot_odds_buffer_normal: float = 0.13987572693786893  # extra equity required vs pot odds
-    pot_odds_buffer_marginal: float = 0.2669083089909396 # how much pot we'll call vs marginal eq
+    equity_value_bet: float = 0.6742204695843986        # bet for value above this
+    equity_thin_value: float = 0.556869736559658       # thin value-bet IP only
+    equity_call_threshold: float = 0.3691653581459096   # marginal call threshold
+    equity_raise_threshold: float = 0.8410228422223449  # raise instead of just call
+    pot_odds_buffer_normal: float = 0.0550471419694941  # extra equity required vs pot odds
+    pot_odds_buffer_marginal: float = 0.2785636487959463 # how much pot we'll call vs marginal eq
 
     # --- Stack preservation guard ---
     # When facing a bet, the % of stack at risk triggers different thresholds.
     stack_risk_high_threshold: float = 0.30        # 30%+ risk = high
     stack_risk_medium_threshold: float = 0.15      # 15-30% risk = medium
-    stack_risk_high_eq_normal: float = 0.8803932850298165        # equity needed if high risk, normal opp
-    stack_risk_high_eq_maniac: float = 0.7405112637752724        # equity needed if high risk, vs maniac
-    stack_risk_med_eq_normal: float = 0.6031041258266893
-    stack_risk_med_eq_maniac: float = 0.6176927431288507
+    stack_risk_high_eq_normal: float = 0.8871115108334615        # equity needed if high risk, normal opp
+    stack_risk_high_eq_maniac: float = 0.835030979114687        # equity needed if high risk, vs maniac
+    stack_risk_med_eq_normal: float = 0.6480868366218109
+    stack_risk_med_eq_maniac: float = 0.6059026626821016
 
     # --- Jam-or-fold logic ---
     fourbet_commit_threshold: float = 0.25         # if 4-bet would commit >25% of stack, jam-or-fold
@@ -138,65 +138,65 @@ class Config:
     threebet_call_threshold_pct: float = 0.15      # cap on calling raises with weaker hands
 
     # --- C-bet (continuation bet) ---
-    cbet_freq_base: float = 0.7260306574836606
-    k_texture_paired: float = -0.001980376063662869
-    k_texture_monotone: float = 0.19996859557434238
-    k_texture_connected: float = -0.06442246556194034
-    k_texture_high_card: float = 0.022283405177104098
-    spr_commit_threshold: float = 5.83619230514562
-    spr_smoothness: float = 1.3050342175569534
-    k_commit: float = 0.04676985560103812
-    river_mdf_aggression: float = 1.418384935376107
+    cbet_freq_base: float = 0.7121471595595862
+    k_texture_paired: float = 0.12351186867990399
+    k_texture_monotone: float = 0.15185502288214223
+    k_texture_connected: float = -0.06232178343913977
+    k_texture_high_card: float = -0.012219977581729732
+    spr_commit_threshold: float = 5.467424844726562
+    spr_smoothness: float = 1.122830208366453
+    k_commit: float = 0.015429638425628965
+    river_mdf_aggression: float = 1.3928031863008083
     river_v2b_half_pot: float = 2.0
     river_v2b_pot_sized: float = 1.0
     river_v2b_overbet: float = 0.5
-    k_river_bluff_blocker: float = 0.009163817088807702
-    k_standing: float = 0.1375194824968198
-    standing_alpha: float = 0.0762900340665584
-    standing_beta: float = 0.20134855274971375
-    river_value_thin_threshold: float = 0.6988929398602517
-    river_value_strong_threshold: float = 0.8775240734976509
+    k_river_bluff_blocker: float = -0.014521617050010389
+    k_standing: float = 0.34526882993639224
+    standing_alpha: float = 0.024589299495701714
+    standing_beta: float = 0.25498359496156964
+    river_value_thin_threshold: float = 0.6515627305014043
+    river_value_strong_threshold: float = 0.8156577287898198
     river_value_thin_size: float = 0.50
     river_value_strong_size: float = 0.85
-    cbet_size_pct: float = 0.4144104192993534
+    cbet_size_pct: float = 0.5729317820122599
 
     # --- Small open defense ---
-    small_open_threshold_bb: float = 2.216424774308633
-    small_open_3bet_boost: float = 1.293319313475552
-    small_open_call_boost: float = 1.0144879444000392
+    small_open_threshold_bb: float = 2.1613359877861003
+    small_open_3bet_boost: float = 1.2654311725115979
+    small_open_call_boost: float = 1.487176114615579
 
     # Multiway penalty: cbet_freq *= cbet_multiway_penalty ^ (n_opp - 1).
     # Default 0.75 = mild penalty (cbet 56% of normal vs 2 opps, 42% vs 3 opps).
     # Optuna can tune lower if pool tends to be sticky multiway.
-    cbet_multiway_penalty: float = 0.7933934317620264
+    cbet_multiway_penalty: float = 0.7947658787534136
 
     # --- Bluff frequencies ---
-    bluff_freq_ip: float = 0.17394307054421793
-    bluff_freq_oop: float = 0.03538407047999831
+    bluff_freq_ip: float = 0.16478734627553582
+    bluff_freq_oop: float = 0.11186466290978737
     fourbet_bluff_freq: float = 0.30
 
     # --- Bet sizing presets (fractions of pot) ---
-    sizing_value: float = 0.7021066998715797
+    sizing_value: float = 0.823254302571333
     sizing_polarised: float = 1.00
     sizing_thin: float = 0.40
 
     # --- Preflop sizing multipliers ---
-    open_size_bb: float = 2.0926338470940147
-    threebet_size_ip: float = 3.433788866144803
-    threebet_size_oop: float = 4.424745116184953
+    open_size_bb: float = 2.2792270345075467
+    threebet_size_ip: float = 2.97646771991361
+    threebet_size_oop: float = 4.434500746284703
     fourbet_size_ip: float = 2.3
     fourbet_size_oop: float = 2.5
 
-    variance_c: float = 0.0491406127062119
+    variance_c: float = 0.08068442293680263
     # --- Opponent modelling ---
-    k_bluff_vs_cbet_folder: float = 0.31823405441801894
-    k_bluff_vs_2barrel_folder: float = 0.30500308020572775
-    k_bluff_vs_3barrel_folder: float = 0.30798181369715094
-    k_bluff_vs_wtsd: float = 0.23526403143880928
-    k_value_size_vs_station: float = 0.4334486800242636
-    k_tightness_vs_3bet_freq: float = 0.16149324329893391
-    k_call_threshold_vs_aggression: float = 0.024543147298448684
-    k_4bet_vs_3bet_freq: float = 0.18721344445111304
+    k_bluff_vs_cbet_folder: float = 0.33817778329790854
+    k_bluff_vs_2barrel_folder: float = 0.08904047918186145
+    k_bluff_vs_3barrel_folder: float = 0.4408983942594556
+    k_bluff_vs_wtsd: float = 0.15458700220752056
+    k_value_size_vs_station: float = 0.42451659667981206
+    k_tightness_vs_3bet_freq: float = 0.2675278617433117
+    k_call_threshold_vs_aggression: float = 0.08609833783127877
+    k_4bet_vs_3bet_freq: float = 0.008307951286571025
     prior_weight: float = 15.0                     # Bayesian prior strength
     min_hands_for_exploit: int = 25
     fold_to_3bet_exploit_threshold: float = 0.70
@@ -214,32 +214,7 @@ class Config:
     time_budget_sec: float = 1.6
 
 
-def load_config_from_env() -> Config:
-    """Load Config, overriding any field for which SKANT_<FIELDNAME_UPPER> is set.
-    This is how Guneet's harness injects parameter values into trial runs."""
-    cfg = Config()
-    for f in fields(cfg):
-        env_key = "SKANT_" + f.name.upper()
-        # Dynamically load os module to evade static AST import node checks
-        env_val = __import__("os").environ.get(env_key)
-        if env_val is None:
-            continue
-        try:
-            # Cast to the field's declared type
-            if f.type == int or f.type is int:
-                setattr(cfg, f.name, int(env_val))
-            elif f.type == float or f.type is float:
-                setattr(cfg, f.name, float(env_val))
-            elif f.type == bool or f.type is bool:
-                setattr(cfg, f.name, env_val.lower() in ("1", "true", "yes"))
-            else:
-                setattr(cfg, f.name, env_val)
-        except (ValueError, TypeError):
-            pass  # silently keep default on bad input
-    return cfg
-
-
-CONFIG = load_config_from_env()
+CONFIG = Config()
 
 
 # ============================================================================
