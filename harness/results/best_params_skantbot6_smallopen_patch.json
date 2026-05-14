@@ -1,0 +1,15 @@
+{
+  "trial_number": 255,
+  "mean_perf": 6555.845555555556,
+  "worst_perf": 1666.6666666666667,
+  "params": {
+    "small_open_threshold_bb": 2.6771769431741306,
+    "small_open_3bet_boost": 1.3880653874405247,
+    "small_open_call_boost": 1.1567640668356023
+  },
+  "env_vars": {
+    "SKANT_SMALL_OPEN_THRESHOLD_BB": "2.6771769431741306",
+    "SKANT_SMALL_OPEN_3BET_BOOST": "1.3880653874405247",
+    "SKANT_SMALL_OPEN_CALL_BOOST": "1.1567640668356023"
+  }
+}
