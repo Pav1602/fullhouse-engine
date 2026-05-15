@@ -107,7 +107,20 @@ PARAM_SPACE = {
     "k_tightness_vs_3bet_freq": ("float", 0.0, 0.5),
     "k_call_threshold_vs_aggression": ("float", 0.0, 0.5),
     "k_4bet_vs_3bet_freq": ("float", 0.0, 0.5),
-    "variance_c": ("float", 0.0, 0.5),
+    "variance_c": ("float", 0.0, 0.2), # reduced from 0.5 per Claude's suggestion
+    
+    # --- Smooth-detection Softness & Thresholds (Phase 2) ---
+    "maniac_softness": ("float", 1e-4, 0.10),
+    "station_softness": ("float", 1e-4, 0.10),
+    "maniac_vpip_threshold": ("float", 0.40, 0.60),
+    "maniac_pfr_threshold": ("float", 0.30, 0.50),
+    "station_vpip_threshold": ("float", 0.25, 0.45),
+    "station_pfr_threshold": ("float", 0.05, 0.25),
+
+    # --- Thin Value OOP ---
+    "oop_passive_value_threshold": ("float", 0.45, 0.60),
+    "oop_passive_value_size": ("float", 0.25, 0.60),
+    "passive_aggression_threshold": ("float", 0.15, 0.45),
 }
 
 # ---------------------------------------------------------------------------
@@ -150,6 +163,10 @@ def make_objective(
         )
         quick_means  = [s["a_mean"] for s in quick_results.values()]
         quick_mean   = sum(quick_means) / len(quick_means)
+        quick_worst  = min(quick_means)
+
+        if quick_worst < -2000:
+            raise optuna.TrialPruned()
 
         best = _state["best_mean_seen"]
         if best is not None and quick_mean < best - 2000:
