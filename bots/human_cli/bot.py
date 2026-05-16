@@ -13,7 +13,9 @@ def decide(game_state):
         for p in s["players"]:
             SEAT_TO_BOT[p["seat"]] = p.get("bot_id", f"Seat {p['seat']}")
 
-    with open('/dev/tty', 'w') as tty_out, open('/dev/tty', 'r') as tty_in:
+    tty_out_path = 'CONOUT$' if os.name == 'nt' else '/dev/tty'
+    tty_in_path = 'CONIN$' if os.name == 'nt' else '/dev/tty'
+    with open(tty_out_path, 'w', encoding='utf-8') as tty_out, open(tty_in_path, 'r', encoding='utf-8') as tty_in:
         def display(msg="", end="\n"):
             tty_out.write(msg + end)
             tty_out.flush()
