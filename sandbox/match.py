@@ -202,6 +202,8 @@ def _play_hand(engine: PokerEngine, procs: dict,
 
     # Broadcast final state so bots can record showdowns and track stats!
     if state.get("type") == "hand_complete":
+        # SAFE DIAGNOSTIC HOOK: Inject all hole cards for human_cli inspection
+        state["all_hole_cards"] = {p.bot_id: [str(c) for c in p.hole_cards] for p in engine.players}
         for bot_id in active_bots:
             try:
                 procs[bot_id].act(state)
