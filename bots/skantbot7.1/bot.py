@@ -122,14 +122,6 @@ class Config:
     pot_odds_buffer_normal: float = 0.060759793987578664  # extra equity required vs pot odds
     pot_odds_buffer_marginal: float = 0.20359090272664318 # how much pot we'll call vs marginal eq
 
-    # --- Stack preservation guard ---
-    # When facing a bet, the % of stack at risk triggers different thresholds.
-    stack_risk_high_threshold: float = 0.30        # 30%+ risk = high
-    stack_risk_medium_threshold: float = 0.15      # 15-30% risk = medium
-    stack_risk_high_eq_normal: float = 0.7718095456314716        # equity needed if high risk, normal opp
-    stack_risk_high_eq_maniac: float = 0.6833234421890474        # equity needed if high risk, vs maniac
-    stack_risk_med_eq_normal: float = 0.503173752179035
-    stack_risk_med_eq_maniac: float = 0.7355006177718408
 
     # --- Jam-or-fold logic ---
     fourbet_commit_threshold: float = 0.25         # if 4-bet would commit >25% of stack, jam-or-fold
@@ -148,8 +140,6 @@ class Config:
     k_commit: float = 0.005431736240613369
     river_mdf_aggression: float = 1.0347922263200438
     river_v2b_half_pot: float = 2.0
-    river_v2b_pot_sized: float = 1.0
-    river_v2b_overbet: float = 0.5
     k_river_bluff_blocker: float = 0.17209477294167339
     k_standing: float = 0.31796916202584563
     standing_alpha: float = 0.08547825513995258
@@ -203,8 +193,6 @@ class Config:
     k_tightness_vs_3bet_freq: float = 0.11352392105838527
     k_call_threshold_vs_aggression: float = 0.3127233543416275
     k_4bet_vs_3bet_freq: float = 0.26269972796612895
-    prior_weight: float = 15.0                     # Bayesian prior strength
-    min_hands_for_exploit: int = 25
     fold_to_3bet_exploit_threshold: float = 0.70
     maniac_min_sample: int = 6
     maniac_vpip_threshold: float = 0.43894329784788855
@@ -694,6 +682,8 @@ def is_calling_station(bot_id: str, cfg=None) -> bool:
     if bot_id not in OPPONENTS:
         return False
     p = OPPONENTS[bot_id]
+    if p.hands_observed > 30 and p.aggression_factor < 0.2:
+        return True
     if p.n_obs["vpip"] < (cfg.station_min_sample if cfg else 8):
         return False
     raw_vpip = p.n_pos["vpip"] / p.n_obs["vpip"]
