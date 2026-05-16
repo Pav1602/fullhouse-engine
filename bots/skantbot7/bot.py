@@ -82,9 +82,9 @@ RANK_IDX = {r: i for i, r in enumerate(RANKS)}
 class Config:
     # --- Preflop tightness offsets ---
     # Multiplied into raise frequencies. 1.0 = chart values, >1 = looser.
-    rfi_tightness: float = 2.023082215163377
-    threebet_tightness: float = 0.9389205262640616
-    fourbet_tightness: float = 1.092042750527517
+    rfi_tightness: float = 1.4392287708809894
+    threebet_tightness: float = 0.9672364841864292
+    fourbet_tightness: float = 1.3143743402023014
 
     # --- Position-specific aggression multipliers ---
     pos_aggression_lj: float = 1.0
@@ -100,36 +100,36 @@ class Config:
     # against the reference field. Optuna can find the right curve per opponent pool.
     stack_full_threshold_bb: float = 80.0
     stack_short_threshold_bb: float = 30.0
-    stack_short_tightness: float = 1.0762061840378374
+    stack_short_tightness: float = 0.805321105277845
 
     # --- Field-shrink widening (4-handed and below) ---
     # When n_active < 6, we widen ranges proportionally toward HU.
     # widening_factor = 1.0 + shrink_widening_factor * (6 - n_active)
-    shrink_widening_factor: float = 0.026810028607063694
+    shrink_widening_factor: float = 0.027565450729339306
 
     # --- Cold-start caution ---
     # Adds to call thresholds when we don't have enough hands on opponent.
     # Default 0 (off) - exposed for Optuna to tune. Setting >0 makes us
     # tighter when calling against unknowns, but can leak EV by missing calls.
-    cold_start_caution: float = 0.002449632443842318
+    cold_start_caution: float = 0.01343018459210442
     cold_start_threshold_hands: int = 6
 
     # --- Postflop equity thresholds ---
-    equity_value_bet: float = 0.6742204695843986        # bet for value above this
-    equity_thin_value: float = 0.556869736559658       # thin value-bet IP only
-    equity_call_threshold: float = 0.3691653581459096   # marginal call threshold
-    equity_raise_threshold: float = 0.8410228422223449  # raise instead of just call
-    pot_odds_buffer_normal: float = 0.0550471419694941  # extra equity required vs pot odds
-    pot_odds_buffer_marginal: float = 0.2785636487959463 # how much pot we'll call vs marginal eq
+    equity_value_bet: float = 0.6218969776040563        # bet for value above this
+    equity_thin_value: float = 0.5075448489331186       # thin value-bet IP only
+    equity_call_threshold: float = 0.391667086154294   # marginal call threshold
+    equity_raise_threshold: float = 0.8565234919909552  # raise instead of just call
+    pot_odds_buffer_normal: float = 0.060759793987578664  # extra equity required vs pot odds
+    pot_odds_buffer_marginal: float = 0.20359090272664318 # how much pot we'll call vs marginal eq
 
     # --- Stack preservation guard ---
     # When facing a bet, the % of stack at risk triggers different thresholds.
     stack_risk_high_threshold: float = 0.30        # 30%+ risk = high
     stack_risk_medium_threshold: float = 0.15      # 15-30% risk = medium
-    stack_risk_high_eq_normal: float = 0.8871115108334615        # equity needed if high risk, normal opp
-    stack_risk_high_eq_maniac: float = 0.835030979114687        # equity needed if high risk, vs maniac
-    stack_risk_med_eq_normal: float = 0.6480868366218109
-    stack_risk_med_eq_maniac: float = 0.6059026626821016
+    stack_risk_high_eq_normal: float = 0.7718095456314716        # equity needed if high risk, normal opp
+    stack_risk_high_eq_maniac: float = 0.6833234421890474        # equity needed if high risk, vs maniac
+    stack_risk_med_eq_normal: float = 0.503173752179035
+    stack_risk_med_eq_maniac: float = 0.7355006177718408
 
     # --- Jam-or-fold logic ---
     fourbet_commit_threshold: float = 0.25         # if 4-bet would commit >25% of stack, jam-or-fold
@@ -138,80 +138,80 @@ class Config:
     threebet_call_threshold_pct: float = 0.15      # cap on calling raises with weaker hands
 
     # --- C-bet (continuation bet) ---
-    cbet_freq_base: float = 0.7121471595595862
-    k_texture_paired: float = 0.12351186867990399
-    k_texture_monotone: float = 0.15185502288214223
-    k_texture_connected: float = -0.06232178343913977
-    k_texture_high_card: float = -0.012219977581729732
-    spr_commit_threshold: float = 5.467424844726562
-    spr_smoothness: float = 1.122830208366453
-    k_commit: float = 0.015429638425628965
-    river_mdf_aggression: float = 1.3928031863008083
+    cbet_freq_base: float = 0.668953558088162
+    k_texture_paired: float = 0.0968532105773869
+    k_texture_monotone: float = 0.17871724865158406
+    k_texture_connected: float = -0.1359572145422062
+    k_texture_high_card: float = -0.060879623950722786
+    spr_commit_threshold: float = 2.5395855491674575
+    spr_smoothness: float = 2.4380477162197742
+    k_commit: float = 0.005431736240613369
+    river_mdf_aggression: float = 1.0347922263200438
     river_v2b_half_pot: float = 2.0
     river_v2b_pot_sized: float = 1.0
     river_v2b_overbet: float = 0.5
-    k_river_bluff_blocker: float = -0.014521617050010389
-    k_standing: float = 0.34526882993639224
-    standing_alpha: float = 0.024589299495701714
-    standing_beta: float = 0.25498359496156964
-    river_value_thin_threshold: float = 0.6515627305014043
-    river_value_strong_threshold: float = 0.8156577287898198
+    k_river_bluff_blocker: float = 0.17209477294167339
+    k_standing: float = 0.31796916202584563
+    standing_alpha: float = 0.08547825513995258
+    standing_beta: float = 0.2617140229564727
+    river_value_thin_threshold: float = 0.5773448433808359
+    river_value_strong_threshold: float = 0.7847769797488329
 
     # --- Thin Value OOP / Passive Opponents ---
-    oop_passive_value_threshold: float = 0.50
-    oop_passive_value_size: float = 0.40
-    passive_aggression_threshold: float = 0.30
+    oop_passive_value_threshold: float = 0.4926512878845096
+    oop_passive_value_size: float = 0.5601561226591456
+    passive_aggression_threshold: float = 0.26734343933421184
 
     river_value_thin_size: float = 0.50
     river_value_strong_size: float = 0.85
-    cbet_size_pct: float = 0.5729317820122599
+    cbet_size_pct: float = 0.5466784602867086
 
     # --- Small open defense ---
-    small_open_threshold_bb: float = 2.1613359877861003
-    small_open_3bet_boost: float = 1.2654311725115979
-    small_open_call_boost: float = 1.487176114615579
+    small_open_threshold_bb: float = 2.067148387560344
+    small_open_3bet_boost: float = 1.7935150146495782
+    small_open_call_boost: float = 2.30261840711962
 
     # Multiway penalty: cbet_freq *= cbet_multiway_penalty ^ (n_opp - 1).
     # Default 0.75 = mild penalty (cbet 56% of normal vs 2 opps, 42% vs 3 opps).
     # Optuna can tune lower if pool tends to be sticky multiway.
-    cbet_multiway_penalty: float = 0.7947658787534136
+    cbet_multiway_penalty: float = 0.5670467005977438
 
     # --- Bluff frequencies ---
-    bluff_freq_ip: float = 0.16478734627553582
-    bluff_freq_oop: float = 0.11186466290978737
+    bluff_freq_ip: float = 0.055597395724183984
+    bluff_freq_oop: float = 0.10051805327119
     fourbet_bluff_freq: float = 0.30
 
     # --- Bet sizing presets (fractions of pot) ---
-    sizing_value: float = 0.823254302571333
+    sizing_value: float = 0.898422791157096
     sizing_polarised: float = 1.00
     sizing_thin: float = 0.40
 
     # --- Preflop sizing multipliers ---
-    open_size_bb: float = 2.2792270345075467
-    threebet_size_ip: float = 2.97646771991361
-    threebet_size_oop: float = 4.434500746284703
+    open_size_bb: float = 2.019452670472681
+    threebet_size_ip: float = 4.230590347497609
+    threebet_size_oop: float = 4.470716826285254
     fourbet_size_ip: float = 2.3
     fourbet_size_oop: float = 2.5
 
-    variance_c: float = 0.08068442293680263
+    variance_c: float = 0.01797201544836934
     # --- Opponent modelling ---
-    k_bluff_vs_cbet_folder: float = 0.33817778329790854
-    k_bluff_vs_2barrel_folder: float = 0.08904047918186145
-    k_bluff_vs_3barrel_folder: float = 0.4408983942594556
-    k_bluff_vs_wtsd: float = 0.15458700220752056
-    k_value_size_vs_station: float = 0.42451659667981206
-    k_tightness_vs_3bet_freq: float = 0.2675278617433117
-    k_call_threshold_vs_aggression: float = 0.08609833783127877
-    k_4bet_vs_3bet_freq: float = 0.008307951286571025
+    k_bluff_vs_cbet_folder: float = 0.4736571312361053
+    k_bluff_vs_2barrel_folder: float = 0.0015887173710043313
+    k_bluff_vs_3barrel_folder: float = 0.3003775364292865
+    k_bluff_vs_wtsd: float = 0.09539700873370287
+    k_value_size_vs_station: float = 0.18805825050566283
+    k_tightness_vs_3bet_freq: float = 0.11352392105838527
+    k_call_threshold_vs_aggression: float = 0.3127233543416275
+    k_4bet_vs_3bet_freq: float = 0.26269972796612895
     prior_weight: float = 15.0                     # Bayesian prior strength
     min_hands_for_exploit: int = 25
     fold_to_3bet_exploit_threshold: float = 0.70
     maniac_min_sample: int = 6
-    maniac_vpip_threshold: float = 0.5273385541287454
-    maniac_pfr_threshold: float = 0.40
+    maniac_vpip_threshold: float = 0.43894329784788855
+    maniac_pfr_threshold: float = 0.47639428548748697
     station_min_sample: int = 8
-    station_vpip_threshold: float = 0.35404883602998494
-    station_pfr_threshold: float = 0.15
+    station_vpip_threshold: float = 0.3843886448145076
+    station_pfr_threshold: float = 0.1971573079775592
 
     # --- Time/sim budget ---
     mc_sims_flop: int = 300
