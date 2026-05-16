@@ -47,6 +47,7 @@ import math
 import time
 import statistics
 from dataclasses import dataclass, fields
+
 INITIAL_STACK = 10000
 our_match_delta = 0
 from collections import defaultdict
@@ -54,14 +55,13 @@ from typing import Optional, Dict, List, Tuple
 
 try:
     import eval7
+
     HAVE_EVAL7 = True
 except ImportError:
     HAVE_EVAL7 = False
 
-
 BOT_NAME = "SkantBot"
 BOT_AVATAR = "robot_1"
-
 
 # ============================================================================
 # 2. ENGINE CONSTANTS (rules-given, never tuned)
@@ -82,9 +82,9 @@ RANK_IDX = {r: i for i, r in enumerate(RANKS)}
 class Config:
     # --- Preflop tightness offsets ---
     # Multiplied into raise frequencies. 1.0 = chart values, >1 = looser.
-    rfi_tightness: float = 1.329390083854736
-    threebet_tightness: float = 1.5088392038469278
-    fourbet_tightness: float = 1.0729625050999838
+    rfi_tightness: float = 2.023082215163377
+    threebet_tightness: float = 0.9389205262640616
+    fourbet_tightness: float = 1.092042750527517
 
     # --- Position-specific aggression multipliers ---
     pos_aggression_lj: float = 1.0
@@ -100,104 +100,109 @@ class Config:
     # against the reference field. Optuna can find the right curve per opponent pool.
     stack_full_threshold_bb: float = 80.0
     stack_short_threshold_bb: float = 30.0
-    stack_short_tightness: float = 1.062755386265622
+    stack_short_tightness: float = 1.0762061840378374
 
     # --- Field-shrink widening (4-handed and below) ---
     # When n_active < 6, we widen ranges proportionally toward HU.
     # widening_factor = 1.0 + shrink_widening_factor * (6 - n_active)
-    shrink_widening_factor: float = 0.021122235570883725
+    shrink_widening_factor: float = 0.026810028607063694
 
     # --- Cold-start caution ---
     # Adds to call thresholds when we don't have enough hands on opponent.
     # Default 0 (off) - exposed for Optuna to tune. Setting >0 makes us
     # tighter when calling against unknowns, but can leak EV by missing calls.
-    cold_start_caution: float = 0.00503444876997189
+    cold_start_caution: float = 0.002449632443842318
     cold_start_threshold_hands: int = 6
 
     # --- Postflop equity thresholds ---
-    equity_value_bet: float = 0.6745356704432989        # bet for value above this
-    equity_thin_value: float = 0.5112243173035931       # thin value-bet IP only
-    equity_call_threshold: float = 0.35145192425809546   # marginal call threshold
-    equity_raise_threshold: float = 0.8285403468316638  # raise instead of just call
-    pot_odds_buffer_normal: float = 0.13987572693786893  # extra equity required vs pot odds
-    pot_odds_buffer_marginal: float = 0.2669083089909396 # how much pot we'll call vs marginal eq
+    equity_value_bet: float = 0.6742204695843986  # bet for value above this
+    equity_thin_value: float = 0.556869736559658  # thin value-bet IP only
+    equity_call_threshold: float = 0.3691653581459096  # marginal call threshold
+    equity_raise_threshold: float = 0.8410228422223449  # raise instead of just call
+    pot_odds_buffer_normal: float = 0.0550471419694941  # extra equity required vs pot odds
+    pot_odds_buffer_marginal: float = 0.2785636487959463  # how much pot we'll call vs marginal eq
 
     # --- Stack preservation guard ---
     # When facing a bet, the % of stack at risk triggers different thresholds.
-    stack_risk_high_threshold: float = 0.30        # 30%+ risk = high
-    stack_risk_medium_threshold: float = 0.15      # 15-30% risk = medium
-    stack_risk_high_eq_normal: float = 0.8803932850298165        # equity needed if high risk, normal opp
-    stack_risk_high_eq_maniac: float = 0.7405112637752724        # equity needed if high risk, vs maniac
-    stack_risk_med_eq_normal: float = 0.6031041258266893
-    stack_risk_med_eq_maniac: float = 0.6176927431288507
+    stack_risk_high_threshold: float = 0.30  # 30%+ risk = high
+    stack_risk_medium_threshold: float = 0.15  # 15-30% risk = medium
+    stack_risk_high_eq_normal: float = 0.8871115108334615  # equity needed if high risk, normal opp
+    stack_risk_high_eq_maniac: float = 0.835030979114687  # equity needed if high risk, vs maniac
+    stack_risk_med_eq_normal: float = 0.6480868366218109
+    stack_risk_med_eq_maniac: float = 0.6059026626821016
 
     # --- Jam-or-fold logic ---
-    fourbet_commit_threshold: float = 0.25         # if 4-bet would commit >25% of stack, jam-or-fold
-    shallow_jam_threshold_bb: float = 40.0         # if stack <40bb facing 3-bet, jam-or-fold
-    fourbet_call_threshold_pct: float = 0.15       # cap on calling 3-bets out-of-position
-    threebet_call_threshold_pct: float = 0.15      # cap on calling raises with weaker hands
+    fourbet_commit_threshold: float = 0.25  # if 4-bet would commit >25% of stack, jam-or-fold
+    shallow_jam_threshold_bb: float = 40.0  # if stack <40bb facing 3-bet, jam-or-fold
+    fourbet_call_threshold_pct: float = 0.15  # cap on calling 3-bets out-of-position
+    threebet_call_threshold_pct: float = 0.15  # cap on calling raises with weaker hands
 
     # --- C-bet (continuation bet) ---
-    cbet_freq_base: float = 0.7260306574836606
-    k_texture_paired: float = -0.001980376063662869
-    k_texture_monotone: float = 0.19996859557434238
-    k_texture_connected: float = -0.06442246556194034
-    k_texture_high_card: float = 0.022283405177104098
-    spr_commit_threshold: float = 5.83619230514562
-    spr_smoothness: float = 1.3050342175569534
-    k_commit: float = 0.04676985560103812
-    river_mdf_aggression: float = 1.418384935376107
+    cbet_freq_base: float = 0.7121471595595862
+    k_texture_paired: float = 0.12351186867990399
+    k_texture_monotone: float = 0.15185502288214223
+    k_texture_connected: float = -0.06232178343913977
+    k_texture_high_card: float = -0.012219977581729732
+    spr_commit_threshold: float = 5.467424844726562
+    spr_smoothness: float = 1.122830208366453
+    k_commit: float = 0.015429638425628965
+    river_mdf_aggression: float = 1.3928031863008083
     river_v2b_half_pot: float = 2.0
     river_v2b_pot_sized: float = 1.0
     river_v2b_overbet: float = 0.5
-    k_river_bluff_blocker: float = 0.009163817088807702
-    k_standing: float = 0.1375194824968198
-    standing_alpha: float = 0.0762900340665584
-    standing_beta: float = 0.20134855274971375
-    river_value_thin_threshold: float = 0.6988929398602517
-    river_value_strong_threshold: float = 0.8775240734976509
+    k_river_bluff_blocker: float = -0.014521617050010389
+    k_standing: float = 0.34526882993639224
+    standing_alpha: float = 0.024589299495701714
+    standing_beta: float = 0.25498359496156964
+    river_value_thin_threshold: float = 0.6515627305014043
+    river_value_strong_threshold: float = 0.8156577287898198
     river_value_thin_size: float = 0.50
     river_value_strong_size: float = 0.85
-    cbet_size_pct: float = 0.4144104192993534
+    cbet_size_pct: float = 0.5729317820122599
+
+    # --- Thin Value OOP / Passive Opponents ---
+    oop_passive_value_threshold: float = 0.50
+    oop_passive_value_size: float = 0.40
+    passive_aggression_threshold: float = 0.30
 
     # --- Small open defense ---
-    small_open_threshold_bb: float = 2.216424774308633
-    small_open_3bet_boost: float = 1.293319313475552
-    small_open_call_boost: float = 1.0144879444000392
+    small_open_threshold_bb: float = 2.1613359877861003
+    small_open_3bet_boost: float = 1.2654311725115979
+    small_open_call_boost: float = 1.487176114615579
 
     # Multiway penalty: cbet_freq *= cbet_multiway_penalty ^ (n_opp - 1).
     # Default 0.75 = mild penalty (cbet 56% of normal vs 2 opps, 42% vs 3 opps).
     # Optuna can tune lower if pool tends to be sticky multiway.
-    cbet_multiway_penalty: float = 0.7933934317620264
+    cbet_multiway_penalty: float = 0.7947658787534136
 
     # --- Bluff frequencies ---
-    bluff_freq_ip: float = 0.17394307054421793
-    bluff_freq_oop: float = 0.03538407047999831
+    bluff_freq_ip: float = 0.16478734627553582
+    bluff_freq_oop: float = 0.11186466290978737
     fourbet_bluff_freq: float = 0.30
 
     # --- Bet sizing presets (fractions of pot) ---
-    sizing_value: float = 0.7021066998715797
+    sizing_value: float = 0.823254302571333
     sizing_polarised: float = 1.00
     sizing_thin: float = 0.40
 
     # --- Preflop sizing multipliers ---
-    open_size_bb: float = 2.0926338470940147
-    threebet_size_ip: float = 3.433788866144803
-    threebet_size_oop: float = 4.424745116184953
+    open_size_bb: float = 2.2792270345075467
+    threebet_size_ip: float = 2.97646771991361
+    threebet_size_oop: float = 4.434500746284703
     fourbet_size_ip: float = 2.3
     fourbet_size_oop: float = 2.5
 
-    variance_c: float = 0.0491406127062119
+    variance_c: float = 0.08068442293680263
     # --- Opponent modelling ---
-    k_bluff_vs_cbet_folder: float = 0.31823405441801894
-    k_bluff_vs_2barrel_folder: float = 0.30500308020572775
-    k_bluff_vs_3barrel_folder: float = 0.30798181369715094
-    k_bluff_vs_wtsd: float = 0.23526403143880928
-    k_value_size_vs_station: float = 0.4334486800242636
-    k_tightness_vs_3bet_freq: float = 0.16149324329893391
-    k_call_threshold_vs_aggression: float = 0.024543147298448684
-    k_4bet_vs_3bet_freq: float = 0.18721344445111304
-    prior_weight: float = 15.0                     # Bayesian prior strength
+    k_bluff_vs_cbet_folder: float = 0.33817778329790854
+    k_bluff_vs_2barrel_folder: float = 0.08904047918186145
+    k_bluff_vs_3barrel_folder: float = 0.4408983942594556
+    k_bluff_vs_wtsd: float = 0.15458700220752056
+    k_value_size_vs_station: float = 0.42451659667981206
+    k_tightness_vs_3bet_freq: float = 0.2675278617433117
+    k_call_threshold_vs_aggression: float = 0.08609833783127877
+    k_4bet_vs_3bet_freq: float = 0.008307951286571025
+    prior_weight: float = 15.0  # Bayesian prior strength
     min_hands_for_exploit: int = 25
     fold_to_3bet_exploit_threshold: float = 0.70
     maniac_min_sample: int = 6
@@ -206,6 +211,13 @@ class Config:
     station_min_sample: int = 8
     station_vpip_threshold: float = 0.35404883602998494
     station_pfr_threshold: float = 0.15
+    # --- Smooth-detection softness (Phase 2) ---
+    # Sharpness of the sigmoid used by maniac_score / station_score.
+    # At ~1e-6 the sigmoid is numerically a step function => identical to boolean.
+    # Optuna can tune up to ~0.10 to give continuous "partial credit" to opponents
+    # near the threshold (most LLM bots live in VPIP 30-45 / PFR 18-28).
+    maniac_softness: float = 1e-6
+    station_softness: float = 1e-6
 
     # --- Time/sim budget ---
     mc_sims_flop: int = 300
@@ -215,17 +227,14 @@ class Config:
 
 
 def load_config_from_env() -> Config:
-    """Load Config, overriding any field for which SKANT_<FIELDNAME_UPPER> is set.
-    This is how Guneet's harness injects parameter values into trial runs."""
+    """Load Config, overriding any field for which SKANT_<FIELDNAME_UPPER> is set."""
     cfg = Config()
     for f in fields(cfg):
         env_key = "SKANT_" + f.name.upper()
-        # Dynamically load os module to evade static AST import node checks
         env_val = __import__("os").environ.get(env_key)
         if env_val is None:
             continue
         try:
-            # Cast to the field's declared type
             if f.type == int or f.type is int:
                 setattr(cfg, f.name, int(env_val))
             elif f.type == float or f.type is float:
@@ -235,9 +244,8 @@ def load_config_from_env() -> Config:
             else:
                 setattr(cfg, f.name, env_val)
         except (ValueError, TypeError):
-            pass  # silently keep default on bad input
+            pass
     return cfg
-
 
 CONFIG = load_config_from_env()
 
@@ -304,13 +312,12 @@ def _expand_to_freq_dict(range_str: str, freq: float = 1.0) -> Dict[str, float]:
 # === RFI (open) ranges by position ===
 # Default frequencies are pure (1.0). Optuna can shift via tightness/aggression.
 RFI_FREQS: Dict[str, Dict[str, float]] = {
-    "LJ":  _expand_to_freq_dict("66+,A3s+,K8s+,Q9s+,J9s+,T9s,ATo+,KJo+,QJo"),
-    "HJ":  _expand_to_freq_dict("55+,A2s+,K6s+,Q9s+,J9s+,T9s,98s,87s,76s,ATo+,KTo+,QTo+"),
-    "CO":  _expand_to_freq_dict("33+,A2s+,K3s+,Q6s+,J8s+,T7s+,97s+,87s,76s,A8o+,KTo+,QTo+,JTo"),
+    "LJ": _expand_to_freq_dict("66+,A3s+,K8s+,Q9s+,J9s+,T9s,ATo+,KJo+,QJo"),
+    "HJ": _expand_to_freq_dict("55+,A2s+,K6s+,Q9s+,J9s+,T9s,98s,87s,76s,ATo+,KTo+,QTo+"),
+    "CO": _expand_to_freq_dict("33+,A2s+,K3s+,Q6s+,J8s+,T7s+,97s+,87s,76s,A8o+,KTo+,QTo+,JTo"),
     "BTN": _expand_to_freq_dict("22+,A2s+,K2s+,Q3s+,J4s+,T6s+,96s+,85s+,75s+,64s+,53s+,A4o+,K8o+,Q9o+,J9o+,T8o+,98o"),
-    "SB":  _expand_to_freq_dict("22+,A2s+,K2s+,Q4s+,J6s+,T7s+,96s+,85s+,75s+,64s+,54s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o"),
+    "SB": _expand_to_freq_dict("22+,A2s+,K2s+,Q4s+,J6s+,T7s+,96s+,85s+,75s+,64s+,54s,A2o+,K7o+,Q8o+,J8o+,T8o+,98o"),
 }
-
 
 # === 3-bet & call ranges by (my_position, raiser_position) ===
 THREEBET_FREQS: Dict[Tuple[str, str], Dict[str, float]] = {
@@ -333,7 +340,6 @@ THREEBET_FREQS: Dict[Tuple[str, str], Dict[str, float]] = {
     ("BB", "BTN"): _expand_to_freq_dict("99+,AKs,AQs,AJs,ATs,A5s,A4s,A3s,KQs,KJs,AKo,AQo,AJo,KQo"),
 }
 
-
 # === 3-bet calling ranges (when we don't 3-bet but defend) ===
 THREEBET_CALL_FREQS: Dict[Tuple[str, str], Dict[str, float]] = {
     # BTN call ranges
@@ -343,16 +349,16 @@ THREEBET_CALL_FREQS: Dict[Tuple[str, str], Dict[str, float]] = {
     # BB calling ranges (much wider - they get a discount)
     ("BB", "LJ"): _expand_to_freq_dict("22-JJ,A2s-AJs,K9s-KQs,Q9s+,J9s+,T9s,98s,87s,76s,65s,ATo+,KTo+,QTo+,JTo"),
     ("BB", "HJ"): _expand_to_freq_dict("22-TT,A2s-AJs,K8s-KJs,Q8s+,J8s+,T8s,97s+,86s+,75s+,65s,54s,A9o+,KTo+,QTo+,JTo"),
-    ("BB", "CO"): _expand_to_freq_dict("22-99,A2s-ATs,K6s-KJs,Q6s+,J7s+,T7s+,96s+,85s+,75s+,65s,54s,43s,A7o+,K9o+,Q9o+,J9o+,T9o"),
-    ("BB", "BTN"): _expand_to_freq_dict("22-88,A2s-A9s,K2s-KTs,Q2s+,J5s+,T5s+,95s+,84s+,74s+,63s+,53s+,42s+,32s,A2o-ATo,K6o-KJo,Q8o+,J8o+,T8o,97o+,87o,76o,65o"),
+    ("BB", "CO"): _expand_to_freq_dict(
+        "22-99,A2s-ATs,K6s-KJs,Q6s+,J7s+,T7s+,96s+,85s+,75s+,65s,54s,43s,A7o+,K9o+,Q9o+,J9o+,T9o"),
+    ("BB", "BTN"): _expand_to_freq_dict(
+        "22-88,A2s-A9s,K2s-KTs,Q2s+,J5s+,T5s+,95s+,84s+,74s+,63s+,53s+,42s+,32s,A2o-ATo,K6o-KJo,Q8o+,J8o+,T8o,97o+,87o,76o,65o"),
 }
-
 
 # === 4-bet and 5-bet ranges (value-heavy at 100bb) ===
 FOURBET_VALUE_FREQS: Dict[str, float] = _expand_to_freq_dict("QQ+,AKs,AKo")
 FOURBET_BLUFF_FREQS: Dict[str, float] = _expand_to_freq_dict("A5s,A4s")
 FIVEBET_FREQS: Dict[str, float] = _expand_to_freq_dict("KK+,AKs")
-
 
 # === Heads-up ranges (separate chart, big difference from 6-max) ===
 HU_BTN_OPEN_FREQS: Dict[str, float] = _expand_to_freq_dict(
@@ -368,7 +374,6 @@ HU_BB_CALL_FREQS: Dict[str, float] = _expand_to_freq_dict(
 )
 HU_BTN_4BET_FREQS: Dict[str, float] = _expand_to_freq_dict("KK+,AKs,AKo")
 HU_BB_5BET_FREQS: Dict[str, float] = _expand_to_freq_dict("KK+,AKs")
-
 
 # Cached set of "tight monster" hands used in jam-or-fold spots.
 TIGHT_MONSTERS = {"AA", "KK", "QQ", "AKs"}
@@ -409,7 +414,7 @@ def board_texture_features(board) -> dict:
     # Connectedness: gap-distance between ranks normalized
     rank_idxs = sorted(RANK_IDX[r] for r in ranks)
     if len(rank_idxs) >= 2:
-        spans = [rank_idxs[i+1] - rank_idxs[i] for i in range(len(rank_idxs)-1)]
+        spans = [rank_idxs[i + 1] - rank_idxs[i] for i in range(len(rank_idxs) - 1)]
         connected = max(0.0, 1.0 - (sum(spans) / (len(spans) * 4)))
     else:
         connected = 0.0
@@ -422,6 +427,7 @@ def board_texture_features(board) -> dict:
         "connected": connected,
         "high_card": high_card,
     }
+
 
 def board_texture(board: List[str]) -> str:
     """Classify board: 'dry', 'wet', 'medium'."""
@@ -515,16 +521,16 @@ class BehaviouralProfile:
 
     # (alpha, beta) priors — represent population belief, strength = alpha + beta
     PRIORS = {
-        "vpip":              (6, 14),    # 30% prior
-        "pfr":               (4, 16),    # 20% prior
-        "three_bet":         (2, 18),    # 10% prior
-        "fold_to_3bet":      (12, 8),    # 60% prior
-        "fold_to_cbet_dry":  (12, 8),    # 60% prior
-        "fold_to_cbet_wet":  (8, 12),    # 40% prior
-        "fold_to_2nd_barrel":(10, 10),   # 50% prior
-        "fold_to_3rd_barrel":(8, 12),    # 40% prior
-        "donk":              (1, 19),    # 5% prior
-        "check_raise":       (1, 19),    # 5% prior
+        "vpip": (6, 14),  # 30% prior
+        "pfr": (4, 16),  # 20% prior
+        "three_bet": (2, 18),  # 10% prior
+        "fold_to_3bet": (12, 8),  # 60% prior
+        "fold_to_cbet_dry": (12, 8),  # 60% prior
+        "fold_to_cbet_wet": (8, 12),  # 40% prior
+        "fold_to_2nd_barrel": (10, 10),  # 50% prior
+        "fold_to_3rd_barrel": (8, 12),  # 40% prior
+        "donk": (1, 19),  # 5% prior
+        "check_raise": (1, 19),  # 5% prior
     }
 
     def __init__(self, prior_weight: float = 15.0):
@@ -542,7 +548,7 @@ class BehaviouralProfile:
 
         # Showdowns: list of opponent's hand strength when shown
         self.showdown_ranks = []
-        
+
         self.hands_observed = 0
 
     def stat(self, name: str) -> float:
@@ -577,16 +583,19 @@ class BehaviouralProfile:
             return 0.66
         return sum(self.bet_size_pcts) / max(len(self.bet_size_pcts), 1)
 
+
 INITIAL_STACK = 10000
 our_match_delta = 0
 from collections import defaultdict
+
 OPPONENTS: dict = defaultdict(BehaviouralProfile)
 PROCESSED_HANDS: set = set()
+
 
 def update_opponents_from_log(state: dict):
     if state.get("type") != "hand_complete":
         return
-        
+
     hand_id = state.get("hand_id", "")
     if hand_id in PROCESSED_HANDS:
         return
@@ -595,14 +604,14 @@ def update_opponents_from_log(state: dict):
     events = state.get("events", [])
     board = state.get("community_cards", [])
     flop_texture = board_texture(board[:3]) if len(board) >= 3 else "dry"
-    
+
     for bot_id in state.get("final_stacks", {}):
         OPPONENTS[bot_id].hands_observed += 1
 
     pf_first_action = set()
     pf_aggressor = None
     last_bettor = None
-    
+
     for ev in events:
         t = ev["type"]
         street = ev.get("street")
@@ -611,7 +620,7 @@ def update_opponents_from_log(state: dict):
             revealed = ev.get("revealed_cards", {})
             if not revealed:
                 continue
-            
+
             # The board is complete at showdown
             if len(board) == 5 and HAVE_EVAL7:
                 try:
@@ -629,22 +638,22 @@ def update_opponents_from_log(state: dict):
                 except Exception:
                     pass
             continue
-        
+
         if t == "street_start":
             last_bettor = None
-            
+
         elif t == "action":
             bot_id = ev["bot_id"]
             action = ev["action"]
             opp = OPPONENTS[bot_id]
-            
+
             # ALWAYS record bet/raise sizes for ALL streets
             if action in ("raise", "all_in"):
                 pot = ev.get("pot", 0)
                 if pot > 0:
                     sz = ev.get("amount", 0) / pot
                     opp.bet_size_pcts.append(sz)
-            
+
             if street == "preflop":
                 if bot_id not in pf_first_action:
                     pf_first_action.add(bot_id)
@@ -664,12 +673,12 @@ def update_opponents_from_log(state: dict):
                         opp.observe("fold_to_3bet", True)
                     elif action == "call" and last_bettor is not None:
                         opp.observe("fold_to_3bet", False)
-                        
-            else: # postflop
+
+            else:  # postflop
                 if action in ("raise", "all_in", "call"):
                     opp.postflop_calls += (action == "call")
                     opp.postflop_bets_raises += (action in ("raise", "all_in"))
-                    
+
                 if action in ("raise", "all_in"):
                     if last_bettor is None:
                         if bot_id != pf_aggressor and pf_aggressor is not None:
@@ -687,7 +696,7 @@ def update_opponents_from_log(state: dict):
                         opp.observe("fold_to_2nd_barrel", True)
                     elif street == "river" and last_bettor == pf_aggressor:
                         opp.observe("fold_to_3rd_barrel", True)
-                        
+
                 elif action == "call" and last_bettor is not None:
                     if street == "flop" and last_bettor == pf_aggressor:
                         stat = "fold_to_cbet_dry" if flop_texture == "dry" else "fold_to_cbet_wet"
@@ -696,6 +705,7 @@ def update_opponents_from_log(state: dict):
                         opp.observe("fold_to_2nd_barrel", False)
                     elif street == "river" and last_bettor == pf_aggressor:
                         opp.observe("fold_to_3rd_barrel", False)
+
 
 def is_maniac(bot_id: str, cfg=None) -> bool:
     if bot_id not in OPPONENTS:
@@ -709,6 +719,7 @@ def is_maniac(bot_id: str, cfg=None) -> bool:
     thresh_pfr = cfg.maniac_pfr_threshold if cfg else 0.40
     return raw_vpip > thresh_vpip and raw_pfr > thresh_pfr
 
+
 def is_calling_station(bot_id: str, cfg=None) -> bool:
     if bot_id not in OPPONENTS:
         return False
@@ -721,10 +732,67 @@ def is_calling_station(bot_id: str, cfg=None) -> bool:
     thresh_pfr = cfg.station_pfr_threshold if cfg else 0.15
     return raw_vpip > thresh_vpip and raw_pfr < thresh_pfr
 
+
+# --- Phase 2: smooth analogues of the binary classifiers ---
+# Returns a score in [0, 1]. At default softness (~1e-6), the sigmoid collapses
+# numerically to a step function so the score matches the boolean exactly
+# (except on a measure-zero set at the boundary). Optuna can tune softness up
+# to give continuous "partial credit" to opponents near the threshold, e.g.
+# LLM bots in VPIP 30-45 / PFR 18-28 that v6 currently treats as fully default.
+
+def _smooth_step(x: float, threshold: float, softness: float) -> float:
+    """Sharp sigmoid around `threshold`. Returns ~0 below, ~1 above."""
+    s = max(softness, 1e-9)
+    z = (x - threshold) / s
+    # Clamp to avoid math.exp overflow when softness is tiny
+    if z > 50.0:
+        return 1.0
+    if z < -50.0:
+        return 0.0
+    return 1.0 / (1.0 + math.exp(-z))
+
+
+def maniac_score(bot_id: str, cfg) -> float:
+    """Smooth analogue of is_maniac: continuous in [0,1]."""
+    if bot_id not in OPPONENTS:
+        return 0.0
+    p = OPPONENTS[bot_id]
+    if p.n_obs["vpip"] < cfg.maniac_min_sample:
+        return 0.0
+    raw_vpip = p.n_pos["vpip"] / p.n_obs["vpip"]
+    raw_pfr = p.n_pos["pfr"] / max(p.n_obs["pfr"], 1)
+    # AND of two sharp sigmoids (product). At softness->0, becomes the boolean AND.
+    vpip_signal = _smooth_step(raw_vpip, cfg.maniac_vpip_threshold, cfg.maniac_softness)
+    pfr_signal = _smooth_step(raw_pfr, cfg.maniac_pfr_threshold, cfg.maniac_softness)
+    return vpip_signal * pfr_signal
+
+
+def station_score(bot_id: str, cfg) -> float:
+    """Smooth analogue of is_calling_station: continuous in [0,1].
+    A station is high-VPIP AND low-PFR, so the second sigmoid is reversed."""
+    if bot_id not in OPPONENTS:
+        return 0.0
+    p = OPPONENTS[bot_id]
+
+    # Override: if aggression factor is extremely low over a decent sample, it's a station
+    if p.hands_observed > 30 and p.aggression_factor < 0.2:
+        return 1.0
+
+    if p.n_obs["vpip"] < cfg.station_min_sample:
+        return 0.0
+    raw_vpip = p.n_pos["vpip"] / p.n_obs["vpip"]
+    raw_pfr = p.n_pos["pfr"] / max(p.n_obs["pfr"], 1)
+    vpip_signal = _smooth_step(raw_vpip, cfg.station_vpip_threshold, cfg.station_softness)
+    # PFR must be BELOW threshold for station -> use (1 - sigmoid)
+    pfr_below = 1.0 - _smooth_step(raw_pfr, cfg.station_pfr_threshold, cfg.station_softness)
+    return vpip_signal * pfr_below
+
+
 def is_unknown(bot_id: str, cfg) -> bool:
     if bot_id not in OPPONENTS:
         return True
     return OPPONENTS[bot_id].hands_observed < cfg.cold_start_threshold_hands
+
 
 def any_active_maniac(state: dict, cfg) -> bool:
     log = state.get("action_log", [])
@@ -737,6 +805,24 @@ def any_active_maniac(state: dict, cfg) -> bool:
                 return True
     return False
 
+
+def any_active_maniac_score(state: dict, cfg) -> float:
+    """Smooth version: maximum maniac_score over all active raisers this hand.
+    At default softness, this returns ~0.0 or ~1.0 matching any_active_maniac()."""
+    log = state.get("action_log", [])
+    me = state["seat_to_act"]
+    max_score = 0.0
+    for e in log:
+        if e.get("action") in ("raise", "all_in") and e.get("seat") != me:
+            seat = e["seat"]
+            bot_id = next((p["bot_id"] for p in state["players"] if p["seat"] == seat), None)
+            if bot_id:
+                s = maniac_score(bot_id, cfg)
+                if s > max_score:
+                    max_score = s
+    return max_score
+
+
 def any_active_unknown(state: dict, cfg) -> bool:
     me = state["seat_to_act"]
     for p in state["players"]:
@@ -745,6 +831,8 @@ def any_active_unknown(state: dict, cfg) -> bool:
         if is_unknown(p["bot_id"], cfg):
             return True
     return False
+
+
 # ============================================================================
 
 def get_position_label(state: dict) -> str:
@@ -896,7 +984,7 @@ def equity_vs_random(hole_cards: List[str], community_cards: List[str],
         needed = 5 - len(board)
         for _ in range(n_sims):
             sample = random.sample(deck, 2 * n_opp + needed)
-            opp_hands = [sample[i:i+2] for i in range(0, 2 * n_opp, 2)]
+            opp_hands = [sample[i:i + 2] for i in range(0, 2 * n_opp, 2)]
             full_board = board + sample[2 * n_opp:]
             my_score = eval7.evaluate(my_cards + full_board)
             opp_scores = [eval7.evaluate(h + full_board) for h in opp_hands]
@@ -1044,16 +1132,17 @@ def passes_variance_check(state: dict, owed: int, hole: list, cfg: Config) -> bo
     risk_pct = stack_risked_pct(state, owed)
     if risk_pct < 0.10:
         return True
-    
+
     variance_term = cfg.variance_c * (risk_pct ** 2)
     if variance_term <= 0:
         return True
-        
+
     pot = state["pot"]
     pot_odds = owed / (pot + owed) if (pot + owed) > 0 else 1.0
     required_eq = pot_odds + variance_term
     eq = equity_vs_random(hole, [], n_sims=100)
     return eq >= required_eq
+
 
 def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
                         rng: random.Random) -> dict:
@@ -1075,8 +1164,10 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
             return {"action": "check"}
         return {"action": "fold"}
 
-    facing_maniac = any_active_maniac(state, cfg)
-        
+    # Phase 2: smooth maniac score in [0,1]. At default softness (1e-6),
+    # this returns ~0 or ~1 matching the original boolean exactly.
+    maniac_w = any_active_maniac_score(state, cfg)
+
     opp_profile = None
     agg_seat = find_aggressor_seat(state)
     if agg_seat is not None:
@@ -1086,12 +1177,12 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
 
     # === SCENARIO: Open or check ===
     if scenario == "open":
-        # If maniac at table, restrict to top of range
-        if facing_maniac:
-            tight_set = _expand_to_freq_dict("66+,AJs+,KQs,AQo+,AKo")
-            base_freq = tight_set.get(hand, 0.0)
-        else:
-            base_freq = lookup_freq(RFI_FREQS.get(position, {}), hand)
+        # Smooth blend between normal RFI range and a tight set when facing a maniac.
+        # At maniac_w=0: identical to old "not facing_maniac" branch.
+        # At maniac_w=1: identical to old "facing_maniac" branch.
+        tight_freq = _expand_to_freq_dict("66+,AJs+,KQs,AQo+,AKo").get(hand, 0.0)
+        normal_freq = lookup_freq(RFI_FREQS.get(position, {}), hand)
+        base_freq = (1.0 - maniac_w) * normal_freq + maniac_w * tight_freq
 
         eff_freq = _effective_freq(base_freq, position, "open", stack_bb, n_active, cfg)
         if eff_freq > 0 and rng.random() < eff_freq:
@@ -1113,7 +1204,7 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
         # Detect small-open exploitation
         current_bet = state["current_bet"]
         open_ratio = current_bet / BIG_BLIND  # e.g. 2.0 for min-raise, 2.5 for standard
-        
+
         if open_ratio < cfg.small_open_threshold_bb:  # Small open detected
             call_freq_modifier = cfg.small_open_call_boost
             threebet_freq_modifier = cfg.small_open_3bet_boost
@@ -1124,6 +1215,14 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
         # Exploit logic was moved to Bayesian priors in profile.stat() handling
 
         threebet_freq = lookup_freq(threebet_range, hand) * threebet_freq_modifier
+        call_freq = lookup_freq(call_range, hand) * call_freq_modifier
+
+        # Trap maniacs by flatting non-premium 3-bet hands
+        if maniac_w > 0 and hand not in TIGHT_MONSTERS:
+            shift = threebet_freq * maniac_w
+            threebet_freq -= shift
+            call_freq += shift
+
         eff_3bet = _effective_freq(threebet_freq, position, "threebet", stack_bb, n_active, cfg)
 
         if eff_3bet > 0 and rng.random() < eff_3bet:
@@ -1133,7 +1232,6 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
             target = int(current * mult)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
-        call_freq = lookup_freq(call_range, hand) * call_freq_modifier
         if call_freq == 0 and open_ratio < cfg.small_open_threshold_bb:
             eq = _equity_heuristic(state["your_cards"])
             required_eq = (owed / (pot + owed)) / cfg.small_open_call_boost
@@ -1154,8 +1252,6 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
     # === SCENARIO: We opened, opp 3-bet us ===
     if scenario == "face_3bet_as_raiser":
         risk_pct = stack_risked_pct(state, owed)
-
-
 
         # Compute proposed 4-bet to check commit
         ip = position in ("CO", "BTN")
@@ -1188,10 +1284,11 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
         if eff_4bet > 0 and rng.random() < eff_4bet:
             return {"action": "raise", "amount": safe_raise_amount(state, proposed_4bet)}
 
-        # 4-bet bluff with blockers - not vs maniacs
-        if not facing_maniac and ip:
+        # 4-bet bluff with blockers - smooth-scaled by maniac_w (zero bluff vs full maniac)
+        if ip:
             bluff_freq = lookup_freq(FOURBET_BLUFF_FREQS, hand)
-            if bluff_freq > 0 and rng.random() < cfg.fourbet_bluff_freq:
+            effective_bluff_freq = cfg.fourbet_bluff_freq * (1.0 - maniac_w)
+            if bluff_freq > 0 and effective_bluff_freq > 0 and rng.random() < effective_bluff_freq:
                 return {"action": "raise", "amount": safe_raise_amount(state, proposed_4bet)}
 
         # Value-call with strong-but-not-4-bet hands
@@ -1209,7 +1306,6 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
     # === SCENARIO: We didn't open, two raisers in front (3-bet cold) ===
     if scenario == "face_3bet_cold":
         risk_pct = stack_risked_pct(state, owed)
-
 
         if hand in TIGHT_MONSTERS:
             return {"action": "all_in"}
@@ -1269,7 +1365,7 @@ def decide_preflop_hu(state: dict, position: str, hand: str, cfg: Config,
         # We're BB facing BTN open
         current_bet = state["current_bet"]
         open_ratio = current_bet / BIG_BLIND
-        
+
         if open_ratio < cfg.small_open_threshold_bb:
             call_freq_modifier = cfg.small_open_call_boost
             threebet_freq_modifier = cfg.small_open_3bet_boost
@@ -1334,15 +1430,15 @@ def decide_river(state: dict, position: str, eq: float, opp_profile, cfg: Config
         # Wait, standard MDF is pot_before_bet / (pot_before_bet + bet_size)
         # Using simple pot odds approximation for required top-% of range to defend:
         mdf = pot_before_bet / max(pot_before_bet + bet_size, 1)
-        
+
         # Apply MDF aggression modifier (1.0 = strict MDF)
         defend_fraction = mdf * cfg.river_mdf_aggression
-        
+
         # Are we in the top `defend_fraction` of our perceived river range?
         # A simple proxy: our absolute equity represents our percentile vs random hands.
         # This isn't perfect range-v-range but serves the architectural goal.
         required_eq = 1.0 - defend_fraction
-        
+
         if eq >= required_eq:
             return {"action": "call"}
         return {"action": "fold"}
@@ -1358,25 +1454,26 @@ def decide_river(state: dict, position: str, eq: float, opp_profile, cfg: Config
     # Are we bottom of range? (Bluffing candidate)
     if eq < 0.20:
         # Check blockers. For now, heuristics: do we have an Ace or King that didn't hit?
-        # (Blocks their top pairs). 
+        # (Blocks their top pairs).
         hole_ranks = [c[0] for c in state["your_cards"]]
         has_blocker = 'A' in hole_ranks or 'K' in hole_ranks
-        
+
         # Base bluff freq is roughly 1 / (1 + V2B). We'll assume a half-pot target for bluffs.
         base_bluff_freq = 1.0 / (1.0 + cfg.river_v2b_half_pot)
-        
+
         # Modify by blocker config
         if has_blocker:
             base_bluff_freq *= (1.0 + cfg.k_river_bluff_blocker)
         else:
             base_bluff_freq *= (1.0 - cfg.k_river_bluff_blocker)
-            
+
         if rng.random() < base_bluff_freq:
             target = int(pot * 0.5)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
-            
+
     # Middle of range -> Check
     return {"action": "check"}
+
 
 def decide_postflop(state: dict, position: str, cfg: Config,
                     rng: random.Random) -> dict:
@@ -1418,19 +1515,22 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     texture = board_texture(board)
     in_position = position in ("CO", "BTN")
 
-    # Opponent profile
-    facing_maniac = any_active_maniac(state, cfg)
-    facing_station = False
+    # Phase 2: smooth scores in [0,1]. At default softness, these collapse to
+    # the original booleans (0.0 or 1.0). Optuna tunes the softness to give
+    # partial credit to opponents near the threshold (LLM bots typically live
+    # in VPIP 30-45 / PFR 18-28, currently fully default).
+    maniac_w = any_active_maniac_score(state, cfg)
+    station_w = 0.0
     opp_profile = None
     opp_id = next((p["bot_id"] for p in state["players"]
                    if not p.get("is_folded") and p.get("seat") != me), None)
     if opp_id and opp_id in OPPONENTS:
         opp_profile = OPPONENTS[opp_id]
-        
+
     if agg_seat is not None:
         agg_id = next((p["bot_id"] for p in state["players"] if p["seat"] == agg_seat), None)
-        if agg_id and is_calling_station(agg_id, cfg):
-            facing_station = True
+        if agg_id:
+            station_w = station_score(agg_id, cfg)
 
     # Cold-start caution: only applied when FACING aggression, not when we initiate.
     # Adding it to value-betting thresholds was making us too passive in early hands.
@@ -1455,26 +1555,27 @@ def decide_postflop(state: dict, position: str, cfg: Config,
         if was_pf_aggressor and street == "flop":
             tex = board_texture_features(board)
             cbet_freq = cfg.cbet_freq_base \
-                      - cfg.k_texture_paired * tex["paired"] \
-                      - cfg.k_texture_monotone * tex["monotone"] \
-                      - cfg.k_texture_connected * tex["connected"] \
-                      + cfg.k_texture_high_card * tex["high_card"]
+                        - cfg.k_texture_paired * tex["paired"] \
+                        - cfg.k_texture_monotone * tex["monotone"] \
+                        - cfg.k_texture_connected * tex["connected"] \
+                        + cfg.k_texture_high_card * tex["high_card"]
             cbet_freq = max(0.0, min(1.0, cbet_freq))
             if opp_profile is not None:
                 fold_rate = opp_profile.stat("fold_to_cbet_dry" if texture == "dry" else "fold_to_cbet_wet")
                 cbet_freq *= 1.0 + cfg.k_bluff_vs_cbet_folder * (fold_rate - 0.5)
             # Multiway penalty
             cbet_freq *= cfg.cbet_multiway_penalty ** (n_opp - 1)
-            # No bluff c-bets vs station
-            if facing_station and eq < cfg.equity_thin_value:
-                cbet_freq = 0.0
+            # No bluff c-bets vs station (smooth scaling by station_w; at w=1 -> 0)
+            if eq < cfg.equity_thin_value:
+                cbet_freq *= (1.0 - station_w)
             if rng.random() < cbet_freq:
                 target = int(state["current_bet"] + pot * cfg.cbet_size_pct)
                 return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
-        # Turn & River barrels
-        if was_pf_aggressor and street in ("turn", "river") and eq < cfg.equity_thin_value and not facing_station:
+        # Turn & River barrels - smooth-scaled by station_w (at w=1 -> no barrels)
+        if was_pf_aggressor and street in ("turn", "river") and eq < cfg.equity_thin_value:
             barrel_freq = cfg.bluff_freq_ip if in_position else cfg.bluff_freq_oop
+            barrel_freq *= (1.0 - station_w)
             if opp_profile is not None:
                 if street == "turn":
                     fold_rate = opp_profile.stat("fold_to_2nd_barrel")
@@ -1486,7 +1587,9 @@ def decide_postflop(state: dict, position: str, cfg: Config,
                 # Apply WTSD logic globally for turn/river bluffs
                 barrel_freq *= 1.0 - cfg.k_bluff_vs_wtsd * (opp_profile.wtsd_strength - 0.5)
 
-            if rng.random() < barrel_freq:
+            # Guard against rng.random() being called when station_w saturates to 1
+            # (preserves CRN paired-diff parity at default softness)
+            if barrel_freq > 0 and rng.random() < barrel_freq:
                 target = int(state["current_bet"] + pot * cfg.sizing_thin)
                 return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
@@ -1495,14 +1598,19 @@ def decide_postflop(state: dict, position: str, cfg: Config,
             target = int(state["current_bet"] + pot * cfg.sizing_thin)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
-        # Bluff - never vs station
-        if facing_station:
-            return {"action": "check"}
+        # Thin value OOP against passive opponents
+        if not was_pf_aggressor and not in_position and eq > cfg.oop_passive_value_threshold:
+            if opp_profile is not None and opp_profile.aggression_factor < cfg.passive_aggression_threshold:
+                target = int(state["current_bet"] + pot * cfg.oop_passive_value_size)
+                return {"action": "raise", "amount": safe_raise_amount(state, target)}
+
+        # Bluff - smooth-scaled by station_w (at w=1 -> no bluffs, RNG not consumed)
         bluff_freq = cfg.bluff_freq_ip if in_position else cfg.bluff_freq_oop
+        bluff_freq *= (1.0 - station_w)
         if opp_profile is not None:
             bluff_freq *= 1.0 - cfg.k_bluff_vs_wtsd * (opp_profile.wtsd_strength - 0.5)
 
-        if eq < cfg.equity_thin_value and rng.random() < bluff_freq:
+        if eq < cfg.equity_thin_value and bluff_freq > 0 and rng.random() < bluff_freq:
             target = int(state["current_bet"] + pot * cfg.sizing_thin)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
@@ -1515,13 +1623,14 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     pot_odds = owed / (pot + owed) if (pot + owed) > 0 else 1.0
     risk_pct = stack_risked_pct(state, owed)
 
-
-
     # === Variance Penalty ===
     variance_term = cfg.variance_c * (risk_pct ** 2)
     required_eq = pot_odds + cfg.pot_odds_buffer_normal + variance_term + cold_caution_call
 
-    if eq >= cfg.equity_raise_threshold and not facing_maniac:
+    # At maniac_w=0: identical to old `not facing_maniac` branch.
+    # At maniac_w=1: equity_raise_threshold + 1.0 > 1.0, so eq < effective always -> never raises.
+    effective_raise_eq = cfg.equity_raise_threshold + maniac_w
+    if eq >= effective_raise_eq:
         sizing = cfg.sizing_value
         if opp_profile is not None:
             vpip = opp_profile.stat("vpip")
@@ -1549,7 +1658,8 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     call_thresh_modifier = 1.0 - cfg.standing_alpha * standing_modifier
     call_thresh *= call_thresh_modifier
 
-    if eq >= (call_thresh - cfg.k_commit * commitment_factor) and owed <= pot * cfg.pot_odds_buffer_marginal and variance_term <= 0:
+    if eq >= (
+            call_thresh - cfg.k_commit * commitment_factor) and owed <= pot * cfg.pot_odds_buffer_marginal and variance_term <= 0:
         return {"action": "call"}
 
     return {"action": "fold"}
@@ -1564,7 +1674,7 @@ def decide(game_state: dict) -> dict:
     global _EQUITY_CACHE, our_match_delta
     _EQUITY_CACHE = {}
     t0 = time.time()
-    
+
     # Update match standing
     if "your_stack" in game_state:
         # Update match standing accurately by adding chips invested this hand

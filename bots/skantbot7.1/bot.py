@@ -619,7 +619,10 @@ def update_opponents_from_log(state: dict):
                     pf_first_action.add(bot_id)
                     opp.observe("vpip", action != "fold")
                     if action in ("raise", "all_in"):
-                        opp.observe("pfr", True)
+                        if pf_aggressor is not None and bot_id != pf_aggressor:
+                            opp.observe("three_bet", True)
+                        else:
+                            opp.observe("pfr", True)
                         pf_aggressor = bot_id
                         last_bettor = bot_id
                     else:
@@ -777,6 +780,16 @@ def get_opp_position(state: dict, opp_seat: int) -> str:
         return {0: "BTN", 1: "SB", 2: "BB"}.get(offset, "BTN")
     return "MP"
 
+
+def any_active_station(state: dict, cfg) -> bool:
+    me = state.get("seat_to_act")
+    for p in state.get("players", []):
+        if p.get("seat") == me or p.get("is_folded"):
+            continue
+        bot_id = p.get("bot_id")
+        if bot_id and is_calling_station(bot_id, cfg):
+            return True
+    return False
 
 def count_aggressors(state: dict) -> int:
     """Count voluntary raisers/all-ins before us this hand (excluding us)."""
@@ -965,10 +978,15 @@ def equity_vs_range(hole_cards: List[str], community_cards: List[str],
 def aggressor_likely_range(state: dict, agg_seat: int) -> Dict[str, float]:
     """Estimate aggressor's likely range based on position and action history."""
     agg_pos = get_opp_position(state, agg_seat)
-    aggressors = count_aggressors(state)
+    
+    if state.get("street") == "preflop":
+        aggressors = count_aggressors(state)
+    else:
+        aggressors = globals().get("_PF_AGGRESSORS", count_aggressors(state))
+
     if aggressors == 1 and agg_pos in RFI_FREQS:
         return RFI_FREQS[agg_pos]
-    if aggressors == 2:
+    if aggressors >= 2:
         # 3-bet range: tight value
         return _expand_to_freq_dict("QQ+,AKs,AKo,A5s")
     return RFI_FREQS.get(agg_pos, RFI_FREQS["LJ"])
@@ -1113,7 +1131,7 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
 
         call_thresh = cfg.threebet_call_threshold_pct
         if opp_profile is not None:
-            tb_rate = opp_profile.stat("three_bet")
+            tb_rate = opp_profile.stat("pfr")
             call_thresh *= 1.0 - cfg.k_tightness_vs_3bet_freq * max(0, tb_rate - 0.10)
         if call_freq > 0 and owed <= state["your_stack"] * call_thresh:
             return {"action": "call"}
@@ -1290,7 +1308,7 @@ def decide_preflop_hu(state: dict, position: str, hand: str, cfg: Config,
 # ============================================================================
 
 
-def decide_river(state: dict, position: str, eq: float, opp_profile, cfg: Config, rng: random.Random) -> dict:
+def decide_river(state: dict, position: str, eq: float, opp_profile, facing_station: bool, cfg: Config, rng: random.Random) -> dict:
     """Phase 6: River-specific MDF and Value-to-Bluff branching."""
     pot = state["pot"]
     owed = state["amount_owed"]
@@ -1322,7 +1340,7 @@ def decide_river(state: dict, position: str, eq: float, opp_profile, cfg: Config
     if eq >= cfg.river_value_strong_threshold:
         target = int(pot * cfg.river_value_strong_size)
         return {"action": "raise", "amount": safe_raise_amount(state, target)}
-    elif eq >= cfg.river_value_thin_threshold:
+    elif eq >= cfg.river_value_thin_threshold and not facing_station:
         target = int(pot * cfg.river_value_thin_size)
         return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
@@ -1384,30 +1402,48 @@ def decide_postflop(state: dict, position: str, cfg: Config,
         v_range = aggressor_likely_range(state, agg_seat)
         eq = equity_vs_range(hole, board, v_range, n_sims=n_sims)
     else:
-        eq = equity_vs_random(hole, board, n_sims=n_sims, n_opp=min(n_opp, 3))
+        tex = board_texture_features(board) if len(board) >= 3 else {"monotone": 0, "connected": 0}
+        is_wet = tex.get("monotone", 0) > 0 or tex.get("connected", 0) > 0
+        n_callers = sum(1 for e in log if e.get("action") == "call")
+        
+        if is_wet and n_callers > 0 and len(board) >= 3:
+            caller_range = _expand_to_freq_dict("22+,A2s+,K9s+,QTs+,JTs,T9s,98s,AJo+,KQo")
+            eq = equity_vs_range(hole, board, caller_range, n_sims=n_sims)
+        else:
+            eq = equity_vs_random(hole, board, n_sims=n_sims, n_opp=min(n_opp, 3))
 
     texture = board_texture(board)
     in_position = position in ("CO", "BTN")
 
     # Opponent profile
     facing_maniac = any_active_maniac(state, cfg)
-    facing_station = False
+    facing_station = any_active_station(state, cfg)
+    
+    # Priority: aggressor -> last to act -> first active (Leak 4)
+    target_seat = agg_seat
+    if target_seat is None:
+        # Find last bettor if any
+        for e in reversed(log):
+            if e.get("action") in ("raise", "all_in", "call", "bet"):
+                if e.get("seat") != me and e.get("seat") is not None:
+                    target_seat = e.get("seat")
+                    break
+    if target_seat is None:
+        active_seats = [p["seat"] for p in state["players"] if not p.get("is_folded") and p.get("seat") != me]
+        if active_seats:
+            target_seat = active_seats[-1]
+            
     opp_profile = None
-    opp_id = next((p["bot_id"] for p in state["players"]
-                   if not p.get("is_folded") and p.get("seat") != me), None)
-    if opp_id and opp_id in OPPONENTS:
-        opp_profile = OPPONENTS[opp_id]
-        
-    if agg_seat is not None:
-        agg_id = next((p["bot_id"] for p in state["players"] if p["seat"] == agg_seat), None)
-        if agg_id and is_calling_station(agg_id, cfg):
-            facing_station = True
+    if target_seat is not None:
+        opp_id = next((p["bot_id"] for p in state["players"] if p["seat"] == target_seat), None)
+        if opp_id and opp_id in OPPONENTS:
+            opp_profile = OPPONENTS[opp_id]
 
     # Cold-start caution: only applied when FACING aggression, not when we initiate.
     # Adding it to value-betting thresholds was making us too passive in early hands.
 
     if street == "river":
-        return decide_river(state, position, eq, opp_profile, cfg, rng)
+        return decide_river(state, position, eq, opp_profile, facing_station, cfg, rng)
 
     cold_caution_call = cfg.cold_start_caution if any_active_unknown(state, cfg) else 0.0
 
@@ -1462,12 +1498,12 @@ def decide_postflop(state: dict, position: str, cfg: Config,
                 return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
         # Thin value IP - not vs station with weak hand
-        if eq >= cfg.equity_thin_value and in_position:
+        if eq >= cfg.equity_thin_value and in_position and not facing_station:
             target = int(state["current_bet"] + pot * cfg.sizing_thin)
             return {"action": "raise", "amount": safe_raise_amount(state, target)}
 
         # Thin value OOP against passive opponents
-        if not was_pf_aggressor and not in_position and eq > cfg.oop_passive_value_threshold:
+        if not was_pf_aggressor and not in_position and eq > cfg.oop_passive_value_threshold and not facing_station:
             if opp_profile is not None and opp_profile.aggression_factor < cfg.passive_aggression_threshold:
                 target = int(state["current_bet"] + pot * cfg.oop_passive_value_size)
                 return {"action": "raise", "amount": safe_raise_amount(state, target)}
@@ -1519,7 +1555,7 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     call_thresh = cfg.equity_call_threshold
     if opp_profile is not None:
         aggression = opp_profile.aggression_factor
-        call_thresh *= 1.0 + cfg.k_call_threshold_vs_aggression * (aggression - 1.0)
+        call_thresh *= 1.0 - cfg.k_call_threshold_vs_aggression * (aggression - 1.0)
 
     # Phase 7: Tighten thin-margin calls when ahead
     standing_modifier = math.tanh(cfg.k_standing * our_match_delta / INITIAL_STACK)
@@ -1538,9 +1574,16 @@ def decide_postflop(state: dict, position: str, cfg: Config,
 
 def decide(game_state: dict) -> dict:
     """Engine entry. Must return within 2 seconds."""
-    global _EQUITY_CACHE, our_match_delta
+    global _EQUITY_CACHE, our_match_delta, _CURRENT_HAND_ID, _PF_AGGRESSORS
     _EQUITY_CACHE = {}
     t0 = time.time()
+    
+    if game_state.get("hand_id") != globals().get("_CURRENT_HAND_ID"):
+        globals()["_CURRENT_HAND_ID"] = game_state.get("hand_id")
+        globals()["_PF_AGGRESSORS"] = 0
+        
+    if game_state.get("street") == "preflop":
+        globals()["_PF_AGGRESSORS"] = count_aggressors(game_state)
     
     # Update match standing
     if "your_stack" in game_state:
