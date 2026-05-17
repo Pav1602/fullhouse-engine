@@ -5,7 +5,19 @@ Author: bot.py template for fullhouse-engine competition
 """
 
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONSTANTS
@@ -160,7 +172,7 @@ def estimate_equity(hole_cards: list, community: list,
         trials = 0
 
         for _ in range(n_sims):
-            random.shuffle(deck)
+            _HAND_RNG.shuffle(deck.cards)
             idx = 0
 
             # Deal opponent hole cards
@@ -365,6 +377,9 @@ def postflop_decision(gs: dict, position: str, n_opponents: int) -> dict:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     """
     Called once per action by the Fullhouse engine.
     Returns one of: fold / check / call / raise / all_in.

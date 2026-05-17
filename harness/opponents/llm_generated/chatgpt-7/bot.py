@@ -5,7 +5,19 @@
 #
 # Uses eval7 if available, otherwise falls back to simple heuristics.
 
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 try:
     import eval7
@@ -98,7 +110,7 @@ def monte_carlo_strength(hole, board, iters=120):
     need = 5 - len(board_cards)
 
     for _ in range(iters):
-        deck.shuffle()
+        _HAND_RNG.shuffle(deck.cards)
         opp = deck.cards[:2]
         runout = deck.cards[2:2+need]
 
@@ -138,6 +150,9 @@ def count_callers(action_log):
 # ----------------------------
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     cards = game_state["your_cards"]
     board = game_state["community_cards"]
     street = game_state["street"]
@@ -167,7 +182,7 @@ def decide(game_state: dict) -> dict:
         pot_odds = owed / max(1, pot + owed)
 
         if s > 0.82:
-            if random.random() < 0.55:
+            if _HAND_RNG.random() < 0.55:
                 amt = choose_raise(min_raise_to, pot, stack, 1.25)
                 return {"action": "raise", "amount": amt}
             return {"action": "call"}
@@ -187,7 +202,7 @@ def decide(game_state: dict) -> dict:
     if can_check:
         # c-bet often into weak players heads-up / small field
         if strength > 0.55:
-            if random.random() < 0.65:
+            if _HAND_RNG.random() < 0.65:
                 amt = choose_raise(min_raise_to, pot, stack, 0.65)
                 return {"action": "raise", "amount": amt}
         return {"action": "check"}
@@ -197,7 +212,7 @@ def decide(game_state: dict) -> dict:
 
     # Nuts / strong made hand
     if strength > 0.82:
-        if random.random() < 0.65:
+        if _HAND_RNG.random() < 0.65:
             amt = choose_raise(min_raise_to, pot, stack, 0.9)
             return {"action": "raise", "amount": amt}
         return {"action": "call"}

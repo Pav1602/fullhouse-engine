@@ -11,7 +11,19 @@
 #
 # Requires: eval7
 
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 import math
 
 try:
@@ -119,7 +131,7 @@ def estimate_equity(hero_cards, board_cards, opp_count=1, iters=120):
         ties = 0
 
         for _ in range(iters):
-            random.shuffle(deck.cards)
+            _HAND_RNG.shuffle(deck.cards)
 
             draw_index = 0
 
@@ -172,7 +184,7 @@ def choose_raise_size(gs, factor):
 
 
 def maybe_raise(freq):
-    return random.random() < freq
+    return _HAND_RNG.random() < freq
 
 
 # -----------------------------
@@ -296,6 +308,9 @@ def postflop_decision(gs):
 # -----------------------------
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     try:
         street = game_state["street"]
 

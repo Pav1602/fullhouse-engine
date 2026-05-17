@@ -1,5 +1,17 @@
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 def _rank_to_strength(rank):
     """Convert eval7 rank (1=best, 7462=worst) to a 0-1 strength."""
@@ -65,6 +77,9 @@ def board_texture(community):
 
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     hole = game_state["your_cards"]
     community = game_state["community_cards"]
     street = game_state["street"]
@@ -82,7 +97,7 @@ def decide(game_state: dict) -> dict:
 
     board_scare = board_texture(community) if street != "preflop" else 0.0
     facing_bet = amount_owed > 0
-    r = random.random()
+    r = _HAND_RNG.random()
 
     # ---------- preflop ----------
     if street == "preflop":

@@ -1,5 +1,17 @@
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 # Pre-compute basic tight-aggressive (TAG) preflop tiers to bypass expensive MC sims
 PREMIUM_PAIRS = [{"A", "A"}, {"K", "K"}, {"Q", "Q"}, {"J", "J"}, {"T", "T"}]
@@ -37,7 +49,7 @@ def mc_equity(hole_cards, board_cards, iters=3000):
     total_draw = cards_to_draw + 2  # board completion + villain's 2 hole cards
 
     for _ in range(iters):
-        deck.shuffle()
+        _HAND_RNG.shuffle(deck.cards)
         draw = deck.peek(total_draw)
 
         sim_board = board + draw[:cards_to_draw]
@@ -55,6 +67,9 @@ def mc_equity(hole_cards, board_cards, iters=3000):
 
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     street = game_state.get("street")
     hole_cards = game_state.get("your_cards", [])
     board = game_state.get("community_cards", [])

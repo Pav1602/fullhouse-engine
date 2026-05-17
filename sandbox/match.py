@@ -69,7 +69,7 @@ class BotProcess:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            env={**os.environ, "BOT_PATH": self.bot_path,
+            env={**os.environ, "BOT_PATH": self.bot_path, "SKANT_MATCH_ID": os.environ.get("SKANT_MATCH_ID", ""),
                  "ACTION_TIMEOUT": str(ACTION_TIMEOUT)},
         )
 

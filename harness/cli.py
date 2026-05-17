@@ -58,6 +58,8 @@ def cmd_compare(args: argparse.Namespace) -> None:
         n_workers=args.workers,
         n_hands=args.hands,
         show_progress=True,
+        mode=args.mode,
+        n_tables=args.n_tables,
     )
 
     # --- formatted table ---
@@ -67,7 +69,13 @@ def cmd_compare(args: argparse.Namespace) -> None:
           f"{'Diff':>9} {'±':>2} {'Diff_se':>7} {'n':>5}")
     print("-" * (COL_W + 9 + 2 + 7 + 9 + 2 + 7 + 9 + 2 + 7 + 5 + 12))
 
-    for opp_id, s in sorted(results.items()):
+    if args.mode == "6max":
+        from harness.match_runner import aggregate_by_opponent
+        display_results = aggregate_by_opponent(results)
+    else:
+        display_results = results
+
+    for opp_id, s in sorted(display_results.items()):
         print(
             f"{opp_id:<{COL_W}} "
             f"{s['a_mean']:>+9.1f} {'±':>2} {s['a_stderr']:>7.1f} "
@@ -97,6 +105,8 @@ def main() -> None:
     p.add_argument("--seeds",   type=int, default=100)
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--hands",   type=int, default=200)
+    p.add_argument("--mode", default="6max", choices=["hu", "6max"])
+    p.add_argument("--n-tables", type=int, default=10)
     p.add_argument("--output",  default=None)
 
     args = parser.parse_args()

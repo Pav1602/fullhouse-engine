@@ -1,5 +1,17 @@
 """Bot C: The Shark — tight preflop, position-aware, value bets."""
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 BOT_NAME = "The Shark"
 
@@ -7,6 +19,12 @@ STRONG_HANDS = {
     ("A", "A"), ("K", "K"), ("Q", "Q"), ("J", "J"), ("T", "T"),
     ("A", "K"), ("A", "Q"), ("A", "J"), ("K", "Q"),
 }
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get("hand_id", "")
+    seat = state.get("seat_to_act", 0)
+    seed_str = f"{hand_id}:{seat}"
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
 
 def hand_strength(cards):
     ranks = tuple(sorted([c[0] for c in cards], reverse=True))
@@ -18,6 +36,10 @@ def hand_strength(cards):
     return "weak"
 
 def decide(state):
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(state)
+
+    rng = get_hand_rng(state)
     street  = state["street"]
     owed    = state["amount_owed"]
     pot     = state["pot"]
@@ -46,7 +68,7 @@ def decide(state):
 
     # Postflop: position-based value betting
     if state["can_check"]:
-        if position > 0.6 and random.random() < 0.4:
+        if position > 0.6 and rng.random() < 0.4:
             bet = min(int(pot * 0.6), stack + state["your_bet_this_street"])
             bet = max(bet, state["min_raise_to"])
             return {"action": "raise", "amount": bet}

@@ -37,6 +37,8 @@ _RESULTS_DIR = Path(__file__).parent / "results"
 
 
 def run_baseline(
+    mode: str = "6max",
+    n_tables: int = 10,
     n_seeds:   int  = 100,
     n_workers: int  = 8,
     n_hands:   int  = 200,
@@ -72,13 +74,17 @@ def run_baseline(
         n_workers=n_workers,
         n_hands=n_hands,
         show_progress=True,
+        mode=mode,
+        n_tables=n_tables,
     )
 
     # Print sorted table (best opponents first)
     col = 25
     print(f"\n{'Opponent':<{col}} {'Mean Δ':>10} {'StdErr':>10} {'n':>6}")
     print("-" * (col + 30))
-    sorted_items = sorted(results.items(), key=lambda x: -x[1]["a_mean"])
+    from harness.match_runner import aggregate_by_opponent
+    disp_results = aggregate_by_opponent(results) if mode == "6max" else results
+    sorted_items = sorted(disp_results.items(), key=lambda x: -x[1]["a_mean"])
     for opp_id, stats in sorted_items:
         note = "  <- bleeding" if stats["a_mean"] < -100 else ""
         print(f"{opp_id:<{col}} {stats['a_mean']:>+10.1f} "
@@ -108,6 +114,8 @@ if __name__ == "__main__":
     p.add_argument("--seeds",   type=int, default=100)
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--hands",   type=int, default=200)
+    p.add_argument("--mode", default="6max", choices=["hu", "6max"])
+    p.add_argument("--n-tables", type=int, default=10)
     p.add_argument("--no-save", action="store_true")
     p.add_argument("--heldout", action="store_true", help="Run against the heldout pool only")
     args = p.parse_args()
@@ -124,4 +132,5 @@ if __name__ == "__main__":
 
     run_baseline(n_seeds=args.seeds, n_workers=args.workers,
                  n_hands=args.hands, save=not args.no_save,
+                 mode=args.mode, n_tables=args.n_tables,
                  pool=pool, pool_name=pool_name)

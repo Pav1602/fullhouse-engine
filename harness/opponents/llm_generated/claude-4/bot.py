@@ -18,7 +18,19 @@ Key design decisions
 • eval7.evaluate: lower integer = better hand
 """
 
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 import eval7  # provided by engine
 
 
@@ -27,6 +39,9 @@ import eval7  # provided by engine
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     try:
         return _decide(game_state)
     except Exception:
@@ -229,7 +244,7 @@ def mc_equity(hole: list, board: list, n_opp: int = 1, sims: int = 400) -> float
         wins = ties = total = 0
 
         for _ in range(sims):
-            random.shuffle(deck)
+            _HAND_RNG.shuffle(deck.cards)
             idx = 0
 
             opps = [deck[idx + i*2 : idx + i*2 + 2] for i in range(n_opp)]
@@ -350,14 +365,14 @@ def _postflop(cards, board, street, pot, owed, can_check, min_raise, stack, posi
 
     if has_draw and street != "river" and position == 2:
         # Semi-bluff in position: 55% frequency
-        if random.random() < 0.55:
+        if _HAND_RNG.random() < 0.55:
             bet = _clamp(int(pot * 0.55), min_raise, stack)
             return {"action": "raise", "amount": bet}
         return {"action": "check"}
 
     if has_draw and street != "river" and position != 2:
         # Out of position draw: check more, bluff less
-        if random.random() < 0.25:
+        if _HAND_RNG.random() < 0.25:
             bet = _clamp(int(pot * 0.50), min_raise, stack)
             return {"action": "raise", "amount": bet}
         return {"action": "check"}

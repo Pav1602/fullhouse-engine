@@ -3,7 +3,19 @@
 # Focus: stack-depth adjustments, position, shove/fold zones, postflop pressure
 # Uses only standard lib + optional eval7 if available
 
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 import math
 
 try:
@@ -78,7 +90,7 @@ def legal_raise(gs, amt):
     return max(gs["min_raise_to"], amt)
 
 def rand_mix(p):
-    return random.random() < p
+    return _HAND_RNG.random() < p
 
 
 # ---------------------------
@@ -137,7 +149,7 @@ def estimate_equity(cards, board, iters=120):
     need = 5 - len(community)
 
     for _ in range(iters):
-        deck.shuffle()
+        _HAND_RNG.shuffle(deck.cards)
         opp = deck.cards[:2]
         runout = deck.cards[2:2+need]
 
@@ -283,6 +295,9 @@ def postflop_decide(gs):
 # ---------------------------
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     try:
         if game_state["street"] == "preflop":
             return preflop_decide(game_state)

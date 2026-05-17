@@ -1,5 +1,17 @@
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 
 def get_preflop_action(game_state):
@@ -86,7 +98,7 @@ def monte_carlo_equity(hole_str, board_str, iters=800):
 
     for _ in range(iters):
         # Use random.sample (O(k)) instead of random.shuffle (O(N)) to dodge 2s CPU timeout limits
-        draw = random.sample(deck, cards_needed + 2)
+        draw = _HAND_RNG.sample(deck, cards_needed + 2)
         sim_board = board_cards + draw[:cards_needed]
         opp_hole = draw[cards_needed:]
 
@@ -103,6 +115,9 @@ def monte_carlo_equity(hole_str, board_str, iters=800):
 
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     street = game_state["street"]
 
     # Hand off to static tree for preflop

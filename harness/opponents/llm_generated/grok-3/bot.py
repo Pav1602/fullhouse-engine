@@ -1,5 +1,17 @@
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 from typing import Dict, Any
 
 # Precomputed or simple preflop ranges (you can expand this heavily)
@@ -49,7 +61,7 @@ def estimate_equity(hero_cards: list[str], board: list[str], num_sim: int = 600)
 
     for _ in range(num_sim):
         trials += 1
-        deck.shuffle()
+        _HAND_RNG.shuffle(deck.cards)
         opp = deck.deal(2)
 
         hero_best = eval7.evaluate(hero + board_cards)
@@ -72,6 +84,9 @@ def get_position(game_state: dict) -> str:
 
 
 def decide(game_state: Dict[str, Any]) -> Dict[str, Any]:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     try:
         your_cards = game_state["your_cards"]
         community = game_state.get("community_cards", [])
@@ -140,7 +155,7 @@ def decide(game_state: Dict[str, Any]) -> Dict[str, Any]:
         if equity > 0.55:
             if can_check:
                 # Semi-bluff or thin value
-                if random.random() < 0.6 or draw_potential:
+                if _HAND_RNG.random() < 0.6 or draw_potential:
                     bet_size = max(min_raise_to or 0, int(pot * 0.5))
                     if bet_size > 0:
                         return {"action": "raise", "amount": min(bet_size, your_stack)}
@@ -151,7 +166,7 @@ def decide(game_state: Dict[str, Any]) -> Dict[str, Any]:
                 return {"action": "fold"}
 
         # Bluff / semi-bluff in position with draws
-        if position in ["late", "button"] and draw_potential and random.random() < 0.45:
+        if position in ["late", "button"] and draw_potential and _HAND_RNG.random() < 0.45:
             if can_check:
                 bet_size = max(min_raise_to or 0, int(pot * 0.6))
                 if bet_size >= (min_raise_to or 0):

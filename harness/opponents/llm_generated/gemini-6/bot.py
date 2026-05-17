@@ -1,5 +1,17 @@
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 
 def get_preflop_action(hole_cards, current_bet, min_raise_to, pot, can_check, amount_owed):
@@ -69,7 +81,7 @@ def calculate_equity(hole_cards, community_cards, iterations=1000):
     ties = 0
 
     for _ in range(iterations):
-        deck.shuffle()
+        _HAND_RNG.shuffle(deck.cards)
         cards_to_draw = 5 - len(board)
 
         # Draw for board completion and opponent's hand
@@ -89,6 +101,9 @@ def calculate_equity(hole_cards, community_cards, iterations=1000):
 
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     """
     Main decision engine. Failsafe wrapper prevents unhandled exceptions
     from causing an auto-fold, keeping the bot alive in the tournament.

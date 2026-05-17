@@ -129,6 +129,8 @@ PARAM_SPACE = {
 
 def make_objective(
     train_pool: dict,
+    mode: str,
+    n_tables: int,
     validation_pool: dict,
     skant_path: str,
     n_seeds: int,
@@ -160,6 +162,8 @@ def make_objective(
             n_workers=n_workers,
             n_hands=n_hands,
             env_overrides=env_overrides,
+            mode=mode,
+            n_tables=n_tables,
         )
         quick_means  = [s["a_mean"] for s in quick_results.values()]
         quick_mean   = sum(quick_means) / len(quick_means)
@@ -184,24 +188,36 @@ def make_objective(
                 n_hands=n_hands,
                 env_overrides=env_overrides,
                 seed_offset=batch_size,
+                mode=mode,
+                n_tables=n_tables,
             )
-            per_opp_means = {}
-            for opp_id in train_pool:
-                q = quick_results[opp_id]["a_mean"]
-                f = full_results[opp_id]["a_mean"]
-                per_opp_means[opp_id] = (q * batch_size + f * remaining) / n_seeds
+            merged_results = {}
+            for k in quick_results.keys():
+                q = quick_results[k]
+                f = full_results.get(k, q)
+                n_q = q["n"]
+                n_f = f["n"] if k in full_results else 0
+                total_n = n_q + n_f
+                merged_a_mean = (q["a_mean"] * n_q + f["a_mean"] * n_f) / total_n if total_n > 0 else 0.0
+                merged_results[k] = {"a_mean": merged_a_mean, "opponents": q.get("opponents", [])}
         else:
-            per_opp_means = {opp_id: quick_results[opp_id]["a_mean"]
-                             for opp_id in train_pool}
+            merged_results = quick_results
 
-        mean_perf  = sum(per_opp_means.values()) / len(per_opp_means)
-        worst_perf = min(per_opp_means.values())
+        table_means = [v["a_mean"] for v in merged_results.values()]
+        mean_perf  = sum(table_means) / len(table_means) if table_means else 0.0
+        worst_perf = min(table_means) if table_means else 0.0
 
         if _state["best_mean_seen"] is None or mean_perf > _state["best_mean_seen"]:
             _state["best_mean_seen"] = mean_perf
 
-        for opp_id, m in per_opp_means.items():
-            trial.set_user_attr(f"train_{opp_id}_mean", m)
+        if mode == "6max":
+            from harness.match_runner import aggregate_by_opponent
+            agg_train = aggregate_by_opponent(merged_results)
+            for opp_id, stat in agg_train.items():
+                trial.set_user_attr(f"opp_{opp_id}_mean", stat["a_mean"])
+        else:
+            for opp_id, v in merged_results.items():
+                trial.set_user_attr(f"opp_{opp_id}_mean", v["a_mean"])
 
         # Phase 3: Evaluate on Unseen Validation pool
         unseen_results = compare(
@@ -212,13 +228,12 @@ def make_objective(
             n_workers=n_workers,
             n_hands=n_hands,
             env_overrides=env_overrides,
+            mode=mode,
+            n_tables=n_tables,
         )
         
-        unseen_means = [s["a_mean"] for s in unseen_results.values()]
-        unseen_mean = sum(unseen_means) / len(unseen_means) if unseen_means else 0.0
-
-        for opp_id, res in unseen_results.items():
-            trial.set_user_attr(f"unseen_{opp_id}_mean", res["a_mean"])
+        unseen_table_means = [s["a_mean"] for s in unseen_results.values()]
+        unseen_mean = sum(unseen_table_means) / len(unseen_table_means) if unseen_table_means else 0.0
 
         trial.set_user_attr("unseen_mean", unseen_mean)
 
@@ -242,6 +257,8 @@ def parse_pool_arg(arg: str) -> dict:
 # ---------------------------------------------------------------------------
 def run_sweep(
     n_trials:    int,
+    mode: str,
+    n_tables: int,
     n_seeds:     int,
     n_hands:     int,
     n_workers:   int,
@@ -283,6 +300,8 @@ def run_sweep(
         n_hands=n_hands,
         n_workers=n_workers,
         batch_size=batch_size,
+        mode=mode,
+        n_tables=n_tables,
     )
 
     print(f"=== Optuna Sweep: {study_name} ===")
@@ -337,6 +356,8 @@ if __name__ == "__main__":
     p.add_argument("--seeds",       type=int, default=40)
     p.add_argument("--hands",       type=int, default=200)
     p.add_argument("--workers",     type=int, default=16)
+    p.add_argument("--mode", default="6max", choices=["hu", "6max"])
+    p.add_argument("--n-tables", type=int, default=10)
     p.add_argument("--batch-size",  type=int, default=10,
                    help="Seeds per pruning batch (default: 10)")
     p.add_argument("--study-name",  default="skantbot6_generalisation_sweep")
@@ -357,6 +378,8 @@ if __name__ == "__main__":
         n_hands=args.hands,
         n_workers=args.workers,
         batch_size=args.batch_size,
+        mode=args.mode,
+        n_tables=args.n_tables,
         study_name=args.study_name,
         storage=args.storage,
         train_opponents=args.train_opponents,

@@ -472,13 +472,13 @@ def stack_risked_pct(state: dict, owed: int) -> float:
 
 
 def get_hand_rng(state: dict) -> random.Random:
-    """Deterministic per-hand RNG. Same hand_id + same matchup = same decisions.
-    This is what lets the harness's CRN testing cancel out our randomness."""
+    import os
     hand_id = state.get("hand_id", "")
     seat = state.get("seat_to_act", 0)
-    # Mix hand_id and seat so different seats see different randomness within a hand
-    seed_str = f"{hand_id}:{seat}:{len(state.get('action_log', []))}"
+    match_id = os.environ.get("SKANT_MATCH_ID", "")
+    seed_str = f"{match_id}_{hand_id}_{seat}"
     return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 
 
 def lookup_freq(freq_dict: Dict[str, float], hand: str) -> float:

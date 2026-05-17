@@ -25,6 +25,7 @@ Acceptance test: compare(path_A, path_A, pool, n_seeds=5) must produce
 
 import os
 import sys
+import random
 import math
 from pathlib import Path
 from multiprocessing import Pool
@@ -54,6 +55,8 @@ def _run_one_match(args: tuple) -> dict:
     from sandbox.match import run_match
 
     match_id, bot_paths, seed, n_hands, env_overrides = args
+    env_overrides = dict(env_overrides) if env_overrides else {}
+    env_overrides["SKANT_MATCH_ID"] = match_id
 
     # Inject env overrides and remember originals for cleanup
     saved = {}
@@ -85,7 +88,236 @@ def _run_one_match(args: tuple) -> dict:
 # Public API
 # ---------------------------------------------------------------------------
 
+
+
+def aggregate_by_opponent(per_table_results: dict) -> dict:
+    opp_totals = {}
+    for table_id, data in per_table_results.items():
+        for opp in data["opponents"]:
+            if opp not in opp_totals:
+                opp_totals[opp] = {
+                    "a_means": [],
+                    "b_means": [],
+                    "paired_diffs": [],
+                    "n_total": 0
+                }
+            opp_totals[opp]["a_means"].append(data["a_mean"])
+            opp_totals[opp]["b_means"].append(data["b_mean"])
+            opp_totals[opp]["paired_diffs"].append(data["paired_diff_mean"])
+            opp_totals[opp]["n_total"] += data["n"]
+            
+    import numpy as np
+    import math
+    def _stderr(arr):
+        n = len(arr)
+        return float(np.std(arr, ddof=1) / math.sqrt(n)) if n > 1 else 0.0
+
+    aggregated = {}
+    for opp, totals in opp_totals.items():
+        n = len(totals["a_means"])
+        aggregated[opp] = {
+            "a_mean": float(np.mean(totals["a_means"])) if n > 0 else 0.0,
+            "a_stderr": _stderr(totals["a_means"]),
+            "b_mean": float(np.mean(totals["b_means"])) if n > 0 else 0.0,
+            "b_stderr": _stderr(totals["b_means"]),
+            "paired_diff_mean": float(np.mean(totals["paired_diffs"])) if n > 0 else 0.0,
+            "paired_diff_stderr": _stderr(totals["paired_diffs"]),
+            "n": totals["n_total"],
+        }
+    return aggregated
+
+
 def compare(
+    bot_a_path: str,
+    bot_b_path: str,
+    opponent_pool: dict,
+    n_seeds: int = 100,
+    n_workers: int = 8,
+    n_hands: int = 200,
+    env_overrides: dict = None,
+    seed_offset: int = 0,
+    show_progress: bool = False,
+    mode: str = "6max",
+    n_tables: int = 10,
+) -> dict:
+    if mode.lower() == "hu":
+        return _compare_hu(
+            bot_a_path=bot_a_path,
+            bot_b_path=bot_b_path,
+            opponent_pool=opponent_pool,
+            n_seeds=n_seeds,
+            n_workers=n_workers,
+            n_hands=n_hands,
+            env_overrides=env_overrides,
+            seed_offset=seed_offset,
+            show_progress=show_progress
+        )
+    elif mode.lower() == "6max":
+        return _compare_6max(
+            bot_a_path=bot_a_path,
+            bot_b_path=bot_b_path,
+            opponent_pool=opponent_pool,
+            n_seeds=n_seeds,
+            n_workers=n_workers,
+            n_hands=n_hands,
+            env_overrides=env_overrides,
+            seed_offset=seed_offset,
+            show_progress=show_progress,
+            n_tables=n_tables
+        )
+    else:
+        raise ValueError(f"Unknown mode {mode}")
+
+
+def _compare_6max(
+    bot_a_path: str,
+    bot_b_path: str,
+    opponent_pool: dict,
+    n_seeds: int,
+    n_workers: int,
+    n_hands: int,
+    env_overrides: dict,
+    seed_offset: int,
+    show_progress: bool,
+    n_tables: int,
+) -> dict:
+    import numpy as np
+
+    if env_overrides is None:
+        env_overrides = {}
+
+    same_bot = (bot_a_path == bot_b_path)
+    
+    tasks = []
+    task_meta = []
+    
+    pool_keys = list(opponent_pool.keys())
+    
+    table_configs = {} # table_id -> list of opponents
+    
+    for i in range(n_seeds):
+        actual_seed = seed_offset + i
+        for t_idx in range(n_tables):
+            # Deterministic opponent sampling
+            rng = random.Random(f"{actual_seed}_{t_idx}")
+            sampled_opp_ids = rng.sample(pool_keys, 5)
+            table_id = "table_" + "_".join(sorted(sampled_opp_ids))
+            
+            table_configs[table_id] = sampled_opp_ids
+            
+            S_rng = random.Random(f"seat_{actual_seed}_{t_idx}")
+            S = S_rng.randint(0, 5)
+            arr1_seat = S
+            arr2_seat = (S + 3) % 6
+            
+            mid_norm = f"cmp_{table_id}_{actual_seed}_norm"
+            mid_swap = f"cmp_{table_id}_{actual_seed}_swap"
+            
+            def make_bot_dict(seat_for_test_bot, test_bot_path):
+                bdict = {}
+                opp_idx = 0
+                for pos in range(6):
+                    if pos == seat_for_test_bot:
+                        bdict[f"test_bot_{pos}"] = test_bot_path
+                    else:
+                        opp_id = sampled_opp_ids[opp_idx]
+                        bdict[f"{opp_id}_{pos}"] = opponent_pool[opp_id]
+                        opp_idx += 1
+                return bdict
+                
+            bot_a_norm_dict = make_bot_dict(arr1_seat, bot_a_path)
+            bot_a_swap_dict = make_bot_dict(arr2_seat, bot_a_path)
+            
+            tasks.append((mid_norm, bot_a_norm_dict, actual_seed, n_hands, env_overrides))
+            task_meta.append((table_id, "a_normal", i, arr1_seat))
+            
+            tasks.append((mid_swap, bot_a_swap_dict, actual_seed, n_hands, env_overrides))
+            task_meta.append((table_id, "a_swapped", i, arr2_seat))
+            
+            if not same_bot:
+                bot_b_norm_dict = make_bot_dict(arr1_seat, bot_b_path)
+                bot_b_swap_dict = make_bot_dict(arr2_seat, bot_b_path)
+                
+                tasks.append((mid_norm, bot_b_norm_dict, actual_seed, n_hands, env_overrides))
+                task_meta.append((table_id, "b_normal", i, arr1_seat))
+                
+                tasks.append((mid_swap, bot_b_swap_dict, actual_seed, n_hands, env_overrides))
+                task_meta.append((table_id, "b_swapped", i, arr2_seat))
+
+    with Pool(processes=n_workers) as pool:
+        if show_progress:
+            import tqdm
+            results = list(tqdm.tqdm(pool.imap(_run_one_match, tasks), total=len(tasks), desc="Matches"))
+        else:
+            results = pool.map(_run_one_match, tasks)
+
+    # Aggregate: table_id -> seed_i -> config_key -> chip_delta
+    raw = {}
+    for (table_id, config_key, local_i, seat_idx), result in zip(task_meta, results):
+        cd = result.get("chip_delta", {})
+        # the key in chip_delta is f"test_bot_{seat_idx}"
+        test_bot_delta = cd.get(f"test_bot_{seat_idx}", 0)
+        raw.setdefault(table_id, {}).setdefault(local_i, {})[config_key] = test_bot_delta
+
+    def _stderr(arr):
+        n = len(arr)
+        return float(np.std(arr, ddof=1) / math.sqrt(n)) if n > 1 else 0.0
+
+    output = {}
+    for table_id, seed_data in raw.items():
+        a_deltas = []
+        b_deltas = []
+        paired_diffs = []
+        
+        # Count number of distinct seeds tested for this table_id
+        for i in seed_data.keys():
+            sd = seed_data[i]
+            if "a_normal" not in sd or "a_swapped" not in sd:
+                continue
+                
+            a_norm = sd["a_normal"]
+            a_swap = sd["a_swapped"]
+            a_avg = (a_norm + a_swap) / 2.0
+            a_deltas.append(a_avg)
+            
+            if not same_bot:
+                b_norm = sd["b_normal"]
+                b_swap = sd["b_swapped"]
+                b_avg = (b_norm + b_swap) / 2.0
+                b_deltas.append(b_avg)
+                paired_diffs.append(a_avg - b_avg)
+
+        a_arr = np.array(a_deltas)
+        n_obs = len(a_deltas)
+        
+        if same_bot:
+            output[table_id] = {
+                "opponents":          table_configs[table_id],
+                "a_mean":             float(np.mean(a_arr)) if n_obs > 0 else 0.0,
+                "a_stderr":           _stderr(a_arr),
+                "b_mean":             float(np.mean(a_arr)) if n_obs > 0 else 0.0,
+                "b_stderr":           _stderr(a_arr),
+                "paired_diff_mean":   0.0,
+                "paired_diff_stderr": 0.0,
+                "n":                  n_obs,
+            }
+        else:
+            b_arr = np.array(b_deltas)
+            d_arr = np.array(paired_diffs)
+            output[table_id] = {
+                "opponents":          table_configs[table_id],
+                "a_mean":             float(np.mean(a_arr)) if n_obs > 0 else 0.0,
+                "a_stderr":           _stderr(a_arr),
+                "b_mean":             float(np.mean(b_arr)) if n_obs > 0 else 0.0,
+                "b_stderr":           _stderr(b_arr),
+                "paired_diff_mean":   float(np.mean(d_arr)) if n_obs > 0 else 0.0,
+                "paired_diff_stderr": _stderr(d_arr),
+                "n":                  n_obs,
+            }
+
+    return output
+
+def _compare_hu(
     bot_a_path: str,
     bot_b_path: str,
     opponent_pool: dict,        # {opp_id: opp_path}

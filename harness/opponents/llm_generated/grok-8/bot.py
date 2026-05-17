@@ -1,5 +1,17 @@
 import eval7
+
 import random
+import os
+
+_HAND_RNG = random.Random()
+
+def get_hand_rng(state: dict) -> random.Random:
+    hand_id = state.get('hand_id', '')
+    seat = state.get('seat_to_act', 0)
+    match_id = os.environ.get('SKANT_MATCH_ID', '')
+    seed_str = f'{match_id}:{hand_id}:{seat}'
+    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+
 from typing import Dict, Any
 
 # Simple preflop hand categories (expandable)
@@ -43,7 +55,7 @@ def evaluate_hand_strength(your_cards: list, community: list) -> float:
         wins = 0
         trials = 500 if len(community) >= 3 else 200  # fewer trials early
         for _ in range(trials):
-            deck.shuffle()
+            _HAND_RNG.shuffle(deck.cards)
             opp_cards = deck.deal(2)
             opp_rank = eval7.evaluate(all_cards[:len(your_cards)] + list(opp_cards) + community)  # wait, correct way:
             # Better: full 7-card for us vs random opp
@@ -59,6 +71,9 @@ def evaluate_hand_strength(your_cards: list, community: list) -> float:
         return 0.5  # neutral on error
 
 def decide(game_state: dict) -> dict:
+    global _HAND_RNG
+    _HAND_RNG = get_hand_rng(game_state)
+
     your_cards = game_state.get("your_cards", [])
     community = game_state.get("community_cards", [])
     street = game_state.get("street", "preflop")
@@ -129,7 +144,7 @@ def decide(game_state: dict) -> dict:
                     return {"action": "all_in"}
                 return {"action": "raise", "amount": raise_amount}
             return {"action": "call"}
-        elif hand_strength > 0.55 and random.random() < 0.25:  # Semi-bluff float/raise sometimes
+        elif hand_strength > 0.55 and _HAND_RNG.random() < 0.25:  # Semi-bluff float/raise sometimes
             if min_raise_to > 0:
                 return {"action": "raise", "amount": max(min_raise_to, int(pot * 2))}
             return {"action": "call"}
