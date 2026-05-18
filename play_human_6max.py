@@ -1,34 +1,41 @@
 import sys
 import os
 import random
+import argparse
 
-# OVERRIDE the engine's 2-second timeout so a human has time to think!
 os.environ["ACTION_TIMEOUT"] = "999999"
-
-# Add root to sys.path so we can import sandbox and harness
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from sandbox.match import run_match
 from harness.opponents.registry import load_pool
 
-# Load all bots from the expanded training and unseen pools
+parser = argparse.ArgumentParser(description="Play 6-max against skantbot + 4 random opponents")
+parser.add_argument("--bot", default="skantbot7.3",
+                    help="Skantbot version to include (default: skantbot7.3). Examples: skantbot7, skantbot7.3")
+parser.add_argument("--hands", type=int, default=200, help="Hands per match (default: 200)")
+parser.add_argument("--seed", type=int, default=None, help="Optional seed for reproducible deck + opponent draw")
+args = parser.parse_args()
+
+opp_path = f"bots/{args.bot}/bot.py"
+if not os.path.isfile(opp_path):
+    print(f"ERROR: bot file not found at {opp_path}")
+    sys.exit(1)
+
+if args.seed is not None:
+    random.seed(args.seed)
+
 pool = load_pool(include_heldout=True)
 available_bots = list(pool.items())
-
-# Pick 4 random opponents
 selected_opponents = random.sample(available_bots, 4)
 
-# Create the final lineup including the human and skantbot7
 bots_list = [
     ("human", "bots/human_cli/bot.py"),
-    ("skantbot7", "bots/skantbot7/bot.py")
+    (args.bot, opp_path)
 ] + selected_opponents
-
-# Shuffle the list so the human and skantbot aren't always in seats 0 and 1
 random.shuffle(bots_list)
 bots = dict(bots_list)
 
-print("Starting 6-max match...")
+print(f"Starting 6-max match with {args.bot} ({args.hands} hands)...")
 print("\nYour Table Lineup:")
 for i, (name, _) in enumerate(bots.items()):
     marker = " (You)" if name == "human" else ""
@@ -37,7 +44,7 @@ for i, (name, _) in enumerate(bots.items()):
 print("\nPress Ctrl+C to quit anytime.")
 
 try:
-    res = run_match("human_vs_skantbot7_6max", bots, n_hands=200, seed=None)
+    res = run_match(f"human_vs_{args.bot}_6max", bots, n_hands=args.hands, seed=args.seed)
     print("\nMatch finished successfully.")
     print("Chip deltas:", res.get("chip_delta", {}))
 except KeyboardInterrupt:

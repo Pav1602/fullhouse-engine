@@ -977,6 +977,18 @@ def equity_vs_range(hole_cards: List[str], community_cards: List[str],
 def aggressor_likely_range(state: dict, agg_seat: int) -> Dict[str, float]:
     """Estimate aggressor's likely range based on position and action history."""
     agg_pos = get_opp_position(state, agg_seat)
+
+    # FIX A: if WE were the last preflop raiser and opp cold-called, opp's
+    # range is "called-vs-our-3bet" -- much tighter than their RFI. Using
+    # RFI here over-inflates our equity in 3-bet pots OOP (Pav's hand 38).
+    log = state.get("action_log", [])
+    pf_raises = [e for e in log if e.get("action") in ("raise", "all_in")]
+    me = state.get("seat_to_act")
+    if len(pf_raises) == 2 and pf_raises[-1].get("seat") == me:
+        return _expand_to_freq_dict(
+            "99-22,AQs-A8s,KQs-KTs,QJs-Q9s,JTs-J9s,T9s-T8s,98s,87s,76s,AJo,KQo"
+        )
+
     aggressors = count_aggressors(state)
     if aggressors == 1 and agg_pos in RFI_FREQS:
         return RFI_FREQS[agg_pos]
