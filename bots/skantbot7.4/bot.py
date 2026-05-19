@@ -1016,8 +1016,9 @@ def count_postflop_raises(state: dict, agg_seat: int) -> int:
     return sum(1 for e in postflop_log if e.get("action") in ("raise", "all_in") and e.get("seat") == agg_seat)
 
 def _narrow_range(rng_dict: dict, strength: str) -> dict:
-    strong = {"AA", "KK", "QQ", "AKs", "AKo"}
-    medium = strong | {"JJ", "TT", "99", "AQs", "AQo"}
+    strong = {"AA", "KK", "QQ", "JJ", "AKs", "AKo"}
+    medium = strong | {"TT", "99", "88", "AQs", "AQo", "AJs", "AJo", "KQs", "KQo",
+                       "T9s", "98s", "87s", "76s"}
     if strength == "strong":
         subset = {k: v for k, v in rng_dict.items() if k in strong}
     elif strength == "medium":
