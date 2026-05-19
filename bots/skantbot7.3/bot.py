@@ -790,17 +790,52 @@ def get_opp_position(state: dict, opp_seat: int) -> str:
     return "MP"
 
 
+def _preflop_action_log(state: dict) -> list:
+    """Return action_log entries from preflop only.
+
+    In HU: preflop ends when the second player either calls a raise or checks
+    behind. After that, any check/raise/call is postflop.
+    """
+    log = state.get("action_log", [])
+    pf = []
+    bets = {}  # seat -> total this street
+    saw_voluntary = False
+    in_pf = True
+    for e in log:
+        if not in_pf:
+            break
+        seat = e.get("seat")
+        action = e.get("action")
+        amt = e.get("amount", 0)
+        pf.append(e)
+        if action in ("small_blind", "big_blind"):
+            bets[seat] = amt
+            continue
+        saw_voluntary = True
+        if action in ("raise", "all_in"):
+            bets[seat] = amt
+        elif action == "call":
+            bets[seat] = max(bets.values())
+        elif action == "check":
+            pass
+        
+        if saw_voluntary and len(bets) >= 2:
+            vals = list(bets.values())
+            if all(v == vals[0] for v in vals):
+                in_pf = False
+                break
+    return pf
+
 def count_aggressors(state: dict) -> int:
     """Count voluntary raisers/all-ins before us this hand (excluding us)."""
-    log = state.get("action_log", [])
+    log = _preflop_action_log(state)
     me = state["seat_to_act"]
     return sum(1 for e in log
                if e.get("action") in ("raise", "all_in") and e.get("seat") != me)
 
-
 def count_my_raises(state: dict) -> int:
     """Count how many times WE have raised in this hand."""
-    log = state.get("action_log", [])
+    log = _preflop_action_log(state)
     me = state["seat_to_act"]
     return sum(1 for e in log
                if e.get("action") in ("raise", "all_in") and e.get("seat") == me)
@@ -974,29 +1009,45 @@ def equity_vs_range(hole_cards: List[str], community_cards: List[str],
         return equity_vs_random(hole_cards, community_cards, n_sims)
 
 
-def aggressor_likely_range(state: dict, agg_seat: int) -> Dict[str, float]:
+
+def count_postflop_raises(state: dict, agg_seat: int) -> int:
+    pf_len = len(_preflop_action_log(state))
+    postflop_log = state.get("action_log", [])[pf_len:]
+    return sum(1 for e in postflop_log if e.get("action") in ("raise", "all_in") and e.get("seat") == agg_seat)
+
+def _narrow_range(rng_dict: dict, strength: str) -> dict:
+    strong = {"AA", "KK", "QQ", "AKs", "AKo"}
+    medium = strong | {"JJ", "TT", "99", "AQs", "AQo"}
+    if strength == "strong":
+        subset = {k: v for k, v in rng_dict.items() if k in strong}
+    elif strength == "medium":
+        subset = {k: v for k, v in rng_dict.items() if k in medium}
+    else:
+        subset = rng_dict
+    return subset if subset else rng_dict
+
+def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     """Estimate aggressor's likely range based on position and action history."""
     agg_pos = get_opp_position(state, agg_seat)
-
-    # FIX A: if WE were the last preflop raiser and opp cold-called, opp's
-    # range is "called-vs-our-3bet" -- much tighter than their RFI. Using
-    # RFI here over-inflates our equity in 3-bet pots OOP (Pav's hand 38).
-    log = state.get("action_log", [])
-    pf_raises = [e for e in log if e.get("action") in ("raise", "all_in")]
-    me = state.get("seat_to_act")
-    if len(pf_raises) == 2 and pf_raises[-1].get("seat") == me:
-        return _expand_to_freq_dict(
-            "99-22,AQs-A8s,KQs-KTs,QJs-Q9s,JTs-J9s,T9s-T8s,98s,87s,76s,AJo,KQo"
-        )
-
     aggressors = count_aggressors(state)
+    
+    # 1. Determine base preflop range
     if aggressors == 1 and agg_pos in RFI_FREQS:
-        return RFI_FREQS[agg_pos]
-    if aggressors == 2:
+        base_range = RFI_FREQS[agg_pos]
+    elif aggressors == 2:
         # 3-bet range: tight value
-        return _expand_to_freq_dict("QQ+,AKs,AKo,A5s")
-    return RFI_FREQS.get(agg_pos, RFI_FREQS["LJ"])
-
+        base_range = _expand_to_freq_dict("QQ+,AKs,AKo,A5s")
+    else:
+        base_range = RFI_FREQS.get(agg_pos, RFI_FREQS["LJ"])
+        
+    # 2. Narrow based on postflop aggression
+    pf_raises = count_postflop_raises(state, agg_seat)
+    if pf_raises == 0 or pf_raises == 1:
+        return base_range
+    elif pf_raises == 2:
+        return _narrow_range(base_range, "medium")
+    else:
+        return _narrow_range(base_range, "strong")
 
 # ============================================================================
 # 9. PREFLOP DECISION
