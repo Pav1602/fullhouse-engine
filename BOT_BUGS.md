@@ -37,3 +37,6 @@ before the tournament even starts.
 
 **Recommended:** Option 1. Once the sweep finds best params, hard-code them as
 the `Config` defaults and strip `import os` for the final submission.
+
+### Leak 2 (over-fold to all-ins)
+`pot_odds = owed / (pot + owed)` uses uncapped owed when opps bet exceeds bot stack. Affects shove-calling frequency in HU. Mechanical fix is `effective_owed = min(owed, stack)`. Cannot ship without re-tuning `equity_call_threshold`, `pot_odds_buffer_normal`, `variance_c` against the train+heldout pools — Optuna sweep recommended. Quick fix loses ~1700 chips/match on heldout. See `REMEDIATION_PLAN_hand38.md` Stage 3.
