@@ -45,14 +45,11 @@ def _test_hand(name, stacks, hole, opp_hole, comm_flop, comm_turn, comm_river, a
     bot = _load_bot("bots/skantbot7.4/bot.py")
     decision = bot.decide(state)
     
-    try:
-        assert decision.get("action") == expected, f"Expected {expected}, got {decision}"
-        print("PASS")
-    except AssertionError as e:
-        print(f"FAIL: {e}")
+    assert decision.get("action") == expected, f"{name}: expected {expected}, got {decision}"
 
-if __name__ == "__main__":
-    _test_hand("test_hand_02", [10000, 10000], ["As", "7d"], ["Ks", "Ts"], ["Jd", "Ks", "7d"], ["2c"], [], [
+
+def test_hand_02():
+    _test_hand("h02", [10000, 10000], ["As", "7d"], ["Ks", "Ts"], ["Jd", "Ks", "7d"], ["2c"], [], [
         {"seat": 1, "action": "raise", "amount": 200},
         {"seat": 0, "action": "call"},
         {"street": "flop"},
@@ -65,7 +62,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"} # Human shoves
     ], "fold")
 
-    _test_hand("test_hand_07", [12601, 7399], ["Kh", "9d"], ["3s", "3c"], ["6c", "4d", "3d"], ["Ts"], [], [
+def test_hand_07():
+    _test_hand("h07", [12601, 7399], ["Kh", "9d"], ["3s", "3c"], ["6c", "4d", "3d"], ["Ts"], [], [
         {"seat": 1, "action": "raise", "amount": 201},
         {"seat": 0, "action": "call"},
         {"street": "flop"},
@@ -78,7 +76,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"} # Actually raised to 400 but folded, let's just make it a big raise to force fold test or replicate exact. The log says human raised to 400, then bot folded.
     ], "fold")
 
-    _test_hand("test_hand_12", [13842, 6158], ["Qh", "6c"], ["Jc", "Kc"], ["2c", "2s", "6s"], ["Ac"], ["As"], [
+def test_hand_12():
+    _test_hand("h12", [13842, 6158], ["Qh", "6c"], ["Jc", "Kc"], ["2c", "2s", "6s"], ["Ac"], ["As"], [
         {"seat": 0, "action": "raise", "amount": 200},
         {"seat": 1, "action": "call"},
         {"street": "flop"},
@@ -92,7 +91,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"}
     ], "fold")
 
-    _test_hand("test_hand_18", [10000, 10000], ["3s", "Tc"], ["5s", "5c"], ["Ad", "Td", "7c"], ["Ac"], ["Ts"], [
+def test_hand_18():
+    _test_hand("h18", [10000, 10000], ["3s", "Tc"], ["5s", "5c"], ["Ad", "Td", "7c"], ["Ac"], ["Ts"], [
         # In hand 18 the index says: Check-call-call-call all the way with pair-of-3s on paired board, called river-bet then fold to bigger raise
         # Let's approximate
         {"seat": 0, "action": "raise", "amount": 200},
@@ -110,7 +110,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"}
     ], "fold")
 
-    _test_hand("test_hand_20", [10000, 10000], ["Ts", "Jh"], ["7s", "6s"], ["2s", "Js", "Qs"], ["3c"], ["8s"], [
+def test_hand_20():
+    _test_hand("h20", [10000, 10000], ["Ts", "Jh"], ["7s", "6s"], ["2s", "Js", "Qs"], ["3c"], ["8s"], [
         {"seat": 0, "action": "raise", "amount": 200},
         {"seat": 1, "action": "call"},
         {"street": "flop"},
@@ -123,7 +124,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"}
     ], "fold")
 
-    _test_hand("test_hand_25", [17136, 2864], ["2s", "5s"], ["3s", "Ah"], ["5c", "Jd", "4c"], [], [], [
+def test_hand_25():
+    _test_hand("h25", [17136, 2864], ["2s", "5s"], ["3s", "Ah"], ["5c", "Jd", "4c"], [], [], [
         {"seat": 1, "action": "raise", "amount": 201},
         {"seat": 0, "action": "call"},
         {"street": "flop"},
@@ -132,7 +134,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"}
     ], "fold") # Should fold pre-Stage-3
 
-    _test_hand("test_hand_30", [17005, 2995], ["Js", "4d"], ["6s", "9s"], ["7s", "3s", "9h"], [], [], [
+def test_hand_30():
+    _test_hand("h30", [17005, 2995], ["Js", "4d"], ["6s", "9s"], ["7s", "3s", "9h"], [], [], [
         {"seat": 0, "action": "call"},
         {"seat": 1, "action": "check"},
         {"street": "flop"},
@@ -140,7 +143,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"}
     ], "fold")
 
-    _test_hand("test_hand_32", [10000, 10000], ["3d", "8h"], ["8d", "7d"], ["2s", "Js", "Qs"], [], [], [
+def test_hand_32():
+    _test_hand("h32", [10000, 10000], ["3d", "8h"], ["8d", "7d"], ["2s", "Js", "Qs"], [], [], [
         {"seat": 0, "action": "raise", "amount": 200},
         {"seat": 1, "action": "call"},
         {"street": "flop"},
@@ -149,7 +153,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "raise", "amount": 350} # Turn check-raise is what the index says, but flop here. We will just test the fold.
     ], "fold")
 
-    _test_hand("test_hand_36", [10000, 10000], ["6h", "5d"], ["As", "5s"], ["Kc", "8h", "2s"], ["9d"], [], [
+def test_hand_36():
+    _test_hand("h36", [10000, 10000], ["6h", "5d"], ["As", "5s"], ["Kc", "8h", "2s"], ["9d"], [], [
         {"seat": 0, "action": "raise", "amount": 200},
         {"seat": 1, "action": "raise", "amount": 600},
         {"seat": 0, "action": "call"},
@@ -162,7 +167,8 @@ if __name__ == "__main__":
         {"seat": 0, "action": "all_in"}
     ], "fold")
 
-    _test_hand("test_hand_38", [17566, 2434], ["8d", "Ad"], ["Js", "Qs"], ["Qd", "7d", "3c"], ["8c"], [], [
+def test_hand_38():
+    _test_hand("h38", [17566, 2434], ["8d", "Ad"], ["Js", "Qs"], ["Qd", "7d", "3c"], ["8c"], [], [
         {"seat": 0, "action": "raise", "amount": 200},
         {"seat": 1, "action": "call"},
         {"street": "flop"},

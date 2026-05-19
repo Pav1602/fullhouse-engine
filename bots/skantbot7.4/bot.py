@@ -1061,14 +1061,25 @@ def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     else:
         base_range = RFI_FREQS.get(agg_pos, RFI_FREQS["LJ"])
         
-    # 2. Narrow based on postflop aggression
+# 2. Narrow based on postflop aggression
     pf_raises = count_postflop_raises(state, agg_seat)
-    if pf_raises == 0 or pf_raises == 1:
+    if pf_raises == 0:
         return base_range
+    elif pf_raises == 1:
+        # Single postflop raise: narrow slightly — opp's range is the "willing to barrel" subset.
+        # On paired boards specifically, a single barrel is heavily value-weighted.
+        board = state.get("community_cards", [])
+        board_strength = "medium"
+        if board and len(board) >= 3:
+            # Check for paired board — if paired, narrow more aggressively
+            ranks = [c[0] for c in board]
+            if len(ranks) != len(set(ranks)):
+                board_strength = "strong"
+        return _narrow_range(base_range, board_strength, board=board)
     elif pf_raises == 2:
-        return _narrow_range(base_range, "medium", state.get("community_cards", []))
+        return _narrow_range(base_range, "medium", board=state.get("community_cards", []))
     else:
-        return _narrow_range(base_range, "strong", state.get("community_cards", []))
+        return _narrow_range(base_range, "strong", board=state.get("community_cards", []))
 
 # ============================================================================
 # 9. PREFLOP DECISION
