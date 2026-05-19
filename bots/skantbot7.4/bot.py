@@ -1026,10 +1026,22 @@ def _narrow_range(rng_dict: dict, strength: str) -> dict:
         subset = rng_dict
     return subset if subset else rng_dict
 
+
 def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     """Estimate aggressor's likely range based on position and action history."""
     agg_pos = get_opp_position(state, agg_seat)
     aggressors = count_aggressors(state)
+    
+    # FIX A: if WE were the last preflop raiser and opp cold-called, opp's
+    # range is "called-vs-our-3bet" -- much tighter than their RFI. Using
+    # RFI here over-inflates our equity in 3-bet pots OOP (Pav's hand 38).
+    pf_log = _preflop_action_log(state)
+    pf_raises_pre = [e for e in pf_log if e.get("action") in ("raise", "all_in")]
+    me = state.get("seat_to_act")
+    if len(pf_raises_pre) == 2 and pf_raises_pre[-1].get("seat") == me:
+        return _expand_to_freq_dict(
+            "99-22,AQs-A8s,KQs-KTs,QJs-Q9s,JTs-J9s,T9s-T8s,98s,87s,76s,AJo,KQo"
+        )
     
     # 1. Determine base preflop range
     if aggressors == 1 and agg_pos in RFI_FREQS:
