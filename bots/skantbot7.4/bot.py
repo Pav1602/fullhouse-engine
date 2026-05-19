@@ -1015,10 +1015,19 @@ def count_postflop_raises(state: dict, agg_seat: int) -> int:
     postflop_log = state.get("action_log", [])[pf_len:]
     return sum(1 for e in postflop_log if e.get("action") in ("raise", "all_in") and e.get("seat") == agg_seat)
 
-def _narrow_range(rng_dict: dict, strength: str) -> dict:
+def _narrow_range(rng_dict: dict, strength: str, board: list = None) -> dict:
     strong = {"AA", "KK", "QQ", "JJ", "AKs", "AKo"}
     medium = strong | {"TT", "99", "88", "AQs", "AQo", "AJs", "AJo", "KQs", "KQo",
                        "T9s", "98s", "87s", "76s"}
+    
+    # Board-aware narrowing
+    if board and len(board) >= 3:
+        texture = board_texture(board)
+        if texture != "dry":
+            # On wet/medium boards, people shove/barrel tighter (more draws hit, more fear)
+            medium = {"AA", "KK", "QQ", "JJ", "TT", "AKs", "AKo", "AQs", "AJs", "KQs"}
+            strong = {"AA", "KK", "QQ", "JJ"}
+
     if strength == "strong":
         subset = {k: v for k, v in rng_dict.items() if k in strong}
     elif strength == "medium":
@@ -1026,7 +1035,6 @@ def _narrow_range(rng_dict: dict, strength: str) -> dict:
     else:
         subset = rng_dict
     return subset if subset else rng_dict
-
 
 def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     """Estimate aggressor's likely range based on position and action history."""
@@ -1058,9 +1066,9 @@ def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     if pf_raises == 0 or pf_raises == 1:
         return base_range
     elif pf_raises == 2:
-        return _narrow_range(base_range, "medium")
+        return _narrow_range(base_range, "medium", state.get("community_cards", []))
     else:
-        return _narrow_range(base_range, "strong")
+        return _narrow_range(base_range, "strong", state.get("community_cards", []))
 
 # ============================================================================
 # 9. PREFLOP DECISION
