@@ -226,3 +226,15 @@ if __name__ == "__main__":
             print(f"FAIL: {e}")
 
 
+
+def test_hand_38_v75_folds():
+    """skantbot7.5 must fold hand 38."""
+    state = _build_hand_38_state()
+    state["your_cards"] = ["8d", "Ad"]
+    bot = _load_bot("bots/skantbot7.5/bot.py")
+    
+    decision = bot.decide(state)
+    print(f"\n[7.5] decision: {decision}")
+    assert decision.get("action") == "fold", (
+        f"skantbot7.5 unexpectedly calls here: {decision}"
+    )
