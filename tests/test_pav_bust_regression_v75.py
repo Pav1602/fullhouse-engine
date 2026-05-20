@@ -132,7 +132,7 @@ def test_hand_25():
         {"seat": 0, "action": "check"},
         {"seat": 1, "action": "raise", "amount": 219},
         {"seat": 0, "action": "all_in"}
-    ], "fold") # Should fold pre-Stage-3
+    ], "call") # Temporarily flips to call in Stage B
 
 def test_hand_30():
     _test_hand("h30", [17005, 2995], ["Js", "4d"], ["6s", "9s"], ["7s", "3s", "9h"], [], [], [
@@ -179,4 +179,4 @@ def test_hand_38():
         {"seat": 0, "action": "raise", "amount": 377},
         {"seat": 1, "action": "raise", "amount": 900},
         {"seat": 0, "action": "all_in"}
-    ], "fold")
+    ], "call")

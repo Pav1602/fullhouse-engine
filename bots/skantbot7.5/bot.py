@@ -1119,7 +1119,8 @@ def _effective_freq(base_freq: float, position: str, scenario: str,
 def passes_variance_check(state: dict, owed: int, hole: list, cfg: Config) -> bool:
     if owed <= 0:
         return True
-    risk_pct = stack_risked_pct(state, owed)
+    effective_owed = min(owed, state.get("your_stack", owed))
+    risk_pct = stack_risked_pct(state, effective_owed)
     if risk_pct < 0.10:
         return True
     
@@ -1128,7 +1129,7 @@ def passes_variance_check(state: dict, owed: int, hole: list, cfg: Config) -> bo
         return True
         
     pot = state["pot"]
-    pot_odds = owed / (pot + owed) if (pot + owed) > 0 else 1.0
+    pot_odds = effective_owed / (pot + effective_owed) if (pot + effective_owed) > 0 else 1.0
     required_eq = pot_odds + variance_term
     eq = equity_vs_random(hole, [], n_sims=100)
     return eq >= required_eq
@@ -1231,7 +1232,8 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
 
     # === SCENARIO: We opened, opp 3-bet us ===
     if scenario == "face_3bet_as_raiser":
-        risk_pct = stack_risked_pct(state, owed)
+        effective_owed = min(owed, state["your_stack"])
+        risk_pct = stack_risked_pct(state, effective_owed)
 
 
 
@@ -1596,8 +1598,9 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     if owed <= 0:
         return {"action": "check"}
 
-    pot_odds = owed / (pot + owed) if (pot + owed) > 0 else 1.0
-    risk_pct = stack_risked_pct(state, owed)
+    effective_owed = min(owed, stack)
+    pot_odds = effective_owed / (pot + effective_owed) if (pot + effective_owed) > 0 else 1.0
+    risk_pct = stack_risked_pct(state, effective_owed)
 
 
 
