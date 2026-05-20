@@ -94,12 +94,16 @@ def make_objective(
         quick_mean   = sum(quick_means) / len(quick_means)
         quick_worst  = min(quick_means)
 
-        if quick_worst < -2000:
-            raise optuna.TrialPruned()
-
-        best = _state["best_mean_seen"]
-        if best is not None and quick_mean < best - 2000:
-            raise optuna.TrialPruned()
+        # Pruning disabled for the v75 sweep. The Stage-B starting bot is
+        # deliberately detuned (pot-odds cap applied, equity thresholds not yet
+        # re-tuned), so the old absolute floor (quick_worst < -2000) pruned
+        # 100% of trials. Optuna's multi-objective TPE sampler also cannot
+        # build a model from a history of pruned trials. Let every trial run
+        # to completion so all three objective values land in the DB; trial
+        # selection happens post-hoc. quick_mean / quick_worst are kept for
+        # the user_attr below.
+        trial.set_user_attr("quick_mean", quick_mean)
+        trial.set_user_attr("quick_worst", quick_worst)
 
         # Phase 2: full eval on train pool
         remaining = n_seeds - batch_size
@@ -123,26 +127,40 @@ def make_objective(
                 n_q = q["n"]
                 n_f = f["n"] if k in full_results else 0
                 total_n = n_q + n_f
-                merged_a_mean = (q["a_mean"] * n_q + f["a_mean"] * n_f) / total_n if total_n > 0 else 0.0
-                merged_results[k] = {"a_mean": merged_a_mean, "opponents": q.get("opponents", [])}
+                # Carry every key aggregate_by_opponent() consumes. The old
+                # merge only kept a_mean; b_mean / paired_diff_mean / n were
+                # dropped, which KeyError'd in the 6max aggregation path. That
+                # bug was masked while pruning killed trials before Phase 2.
+                merged_results[k] = {
+                    "a_mean": (q["a_mean"] * n_q + f["a_mean"] * n_f) / total_n if total_n > 0 else 0.0,
+                    "b_mean": (q["b_mean"] * n_q + f["b_mean"] * n_f) / total_n if total_n > 0 else 0.0,
+                    "paired_diff_mean": (q["paired_diff_mean"] * n_q + f["paired_diff_mean"] * n_f) / total_n if total_n > 0 else 0.0,
+                    "n": total_n,
+                    "opponents": q.get("opponents", []),
+                }
         else:
             merged_results = quick_results
 
-        table_means = [v["a_mean"] for v in merged_results.values()]
-        mean_perf  = sum(table_means) / len(table_means) if table_means else 0.0
-        worst_perf = min(table_means) if table_means else 0.0
-
-        if _state["best_mean_seen"] is None or mean_perf > _state["best_mean_seen"]:
-            _state["best_mean_seen"] = mean_perf
-
+        # mean_perf / worst_perf are computed per-OPPONENT, not per-table. A
+        # per-table min saturates at -STARTING_STACK (any single felted table
+        # = -10000), making worst_perf a dead constant. The per-opponent
+        # aggregate mean is the meaningful per-opponent worst-case signal.
         if mode == "6max":
             from harness.match_runner import aggregate_by_opponent
             agg_train = aggregate_by_opponent(merged_results)
             for opp_id, stat in agg_train.items():
                 trial.set_user_attr(f"opp_{opp_id}_mean", stat["a_mean"])
+            perf_means = [stat["a_mean"] for stat in agg_train.values()]
         else:
             for opp_id, v in merged_results.items():
                 trial.set_user_attr(f"opp_{opp_id}_mean", v["a_mean"])
+            perf_means = [v["a_mean"] for v in merged_results.values()]
+
+        mean_perf  = sum(perf_means) / len(perf_means) if perf_means else 0.0
+        worst_perf = min(perf_means) if perf_means else 0.0
+
+        if _state["best_mean_seen"] is None or mean_perf > _state["best_mean_seen"]:
+            _state["best_mean_seen"] = mean_perf
 
         # Phase 3: Evaluate on Unseen Validation pool
         unseen_results = compare(
