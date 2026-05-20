@@ -36,91 +36,16 @@ _RESULTS_DIR = Path(__file__).parent / "results"
 # Parameter search space
 # ---------------------------------------------------------------------------
 PARAM_SPACE = {
-    # --- Small open defense ---
-    "small_open_threshold_bb": ("float", 2.05, 2.25),
-    "small_open_3bet_boost": ("float", 1.0, 2.0),
-    "small_open_call_boost": ("float", 1.0, 2.5),
-
-    # --- Preflop tightness & multipliers ---
-    "rfi_tightness": ("float", 0.8, 2.2),
-    "threebet_tightness": ("float", 0.8, 2.2),
-    "fourbet_tightness": ("float", 0.8, 1.5),
-    "stack_short_tightness": ("float", 0.7, 1.1),
-    "shrink_widening_factor": ("float", 0.0, 0.05),
-    "cold_start_caution": ("float", 0.0, 0.02),
-
-    # --- Preflop sizing multipliers ---
-    "open_size_bb": ("float", 2.0, 2.5),
-    "threebet_size_ip": ("float", 2.8, 4.5),
-    "threebet_size_oop": ("float", 3.0, 4.5),
-
-    # --- Postflop equity thresholds ---
-    "equity_value_bet": ("float", 0.55, 0.75),
-    "equity_thin_value": ("float", 0.48, 0.60),
-    "equity_call_threshold": ("float", 0.30, 0.45),
-    "equity_raise_threshold": ("float", 0.75, 0.90),
+    "cbet_freq_base": ("float", 0.30, 0.668),
+    "bluff_freq_ip": ("float", 0.005, 0.056),
+    "bluff_freq_oop": ("float", 0.01, 0.101),
+    "k_texture_paired": ("float", 0.10, 0.50),
+    "k_texture_connected": ("float", -0.30, 0.10),
+    "equity_call_threshold": ("float", 0.35, 0.60),
     "pot_odds_buffer_normal": ("float", 0.05, 0.20),
-    "pot_odds_buffer_marginal": ("float", 0.10, 0.30),
-
-    # --- Stack preservation guards ---
-    "stack_risk_high_eq_normal": ("float", 0.75, 0.95),
-    "stack_risk_high_eq_maniac": ("float", 0.65, 0.85),
-    "stack_risk_med_eq_normal": ("float", 0.50, 0.70),
-    "stack_risk_med_eq_maniac": ("float", 0.55, 0.75),
-
-    # --- Bet sizing presets ---
-    "sizing_value": ("float", 0.60, 1.00),
-    "cbet_size_pct": ("float", 0.25, 0.60),
-
-    # --- C-bet & Texture coefficients ---
-    "cbet_freq_base": ("float", 0.65, 0.95),
-    "k_texture_paired": ("float", -0.2, 0.2),
-    "k_texture_monotone": ("float", -0.2, 0.2),
-    "k_texture_connected": ("float", -0.2, 0.2),
-    "k_texture_high_card": ("float", -0.2, 0.2),
-    "cbet_multiway_penalty": ("float", 0.5, 1.0),
-    "spr_commit_threshold": ("float", 2.0, 6.0),
-    "spr_smoothness": ("float", 1.0, 3.0),
-
-    # --- River Aggression & thresholds ---
-    "river_mdf_aggression": ("float", 0.5, 1.5),
-    "k_river_bluff_blocker": ("float", -0.2, 0.2),
-    "river_value_thin_threshold": ("float", 0.55, 0.70),
-    "river_value_strong_threshold": ("float", 0.75, 0.90),
-
-    # --- Bluffing ---
-    "bluff_freq_ip": ("float", 0.05, 0.35),
-    "bluff_freq_oop": ("float", 0.0, 0.15),
-
-    # --- Match standing & Commitment ---
-    "k_commit": ("float", 0.0, 0.2),
-    "k_standing": ("float", 0.0, 0.5),
-    "standing_alpha": ("float", 0.0, 0.5),
-    "standing_beta": ("float", 0.0, 0.5),
-
-    # --- Counter-exploit modeling ---
-    "k_bluff_vs_cbet_folder": ("float", 0.0, 0.5),
-    "k_bluff_vs_2barrel_folder": ("float", 0.0, 0.5),
-    "k_bluff_vs_3barrel_folder": ("float", 0.0, 0.5),
-    "k_bluff_vs_wtsd": ("float", 0.0, 0.5),
-    "k_value_size_vs_station": ("float", 0.0, 0.5),
-    "k_tightness_vs_3bet_freq": ("float", 0.0, 0.5),
-    "k_call_threshold_vs_aggression": ("float", 0.0, 0.5),
-    "k_4bet_vs_3bet_freq": ("float", 0.0, 0.5),
-    "variance_c": ("float", 0.0, 0.2), # reduced from 0.5 per Claude's suggestion
-    
-    # --- Smooth-detection Softness & Thresholds (Phase 2) ---
-    "maniac_softness": ("float", 1e-4, 0.10),
-    "station_softness": ("float", 1e-4, 0.10),
-    "maniac_vpip_threshold": ("float", 0.40, 0.60),
-    "maniac_pfr_threshold": ("float", 0.30, 0.50),
-    "station_vpip_threshold": ("float", 0.25, 0.45),
-    "station_pfr_threshold": ("float", 0.05, 0.25),
-
-    # --- Thin Value OOP ---
-    "oop_passive_value_threshold": ("float", 0.45, 0.60),
-    "oop_passive_value_size": ("float", 0.25, 0.60),
-    "passive_aggression_threshold": ("float", 0.15, 0.45),
+    "variance_c": ("float", 0.005, 0.10),
+    "equity_value_bet": ("float", 0.55, 0.75),
+    "equity_thin_value": ("float", 0.45, 0.62),
 }
 
 # ---------------------------------------------------------------------------
