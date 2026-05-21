@@ -63,3 +63,38 @@ Do **not** ship 7.5/741. Options:
    tuned against the wrong pot-odds, again). Significant rework.
 
 Test assertions must be corrected regardless (hand 38 → `fold`).
+
+---
+
+## 7.6 pot-odds audit (2026-05-21) — the diagnosis was wrong
+
+Probe (`$CLAUDE_JOB_DIR/probe_potodds.py`) over every bust-log all-in-over-stack
+hand: bot's own modeled equity vs corrected pot odds (callable pot). Key rows:
+
+```
+ hand   owed  stack    pot  callpot  po_raw  po_corr  mod_eq  req_eq | 7.4  cur7.5  corrected
+ h38   16466   1334  18666     3534   0.067    0.274   0.463   0.366 | fold  call    call
+ h25   16716   2444  17556     3284   0.122    0.427   0.390   0.519 | fold  call    fold
+```
+
+1. **The pot-odds formula is NOT the hand-38 bug.** The bot models its hand-38
+   equity at **46.3%** — not the ~25% the leak file assumed. With *correct*
+   pot odds (~27%), 46% equity is a clear call. Fixing pot-odds does not make
+   hand 38 fold — the corrected-formula bot still calls it.
+
+2. **7.4 folds hand 38 by accident — two bugs cancelling.** Its equity model
+   is inflated (~46%, true ~25%: Leak 1 only *half*-fixed), AND its pot-odds is
+   inflated (Leak 2 unfixed → required_eq ~58%). 46 < 58 → fold. Fix either
+   bug alone and the cancellation breaks; 7.5 fixed Leak 2 → hand 38 calls.
+
+3. **The real unfixed bug is LEAK 1 — the range/equity model.** The v7.4
+   "hand-38 fix" narrowed the aggressor range estimate from ~74% to ~46%, not
+   to the ~25% the diagnosis says is correct. Still too wide.
+
+4. **The "Leak 2 over-fold" diagnosis (hand 25) was wrong.** Under correct pot
+   odds h25 is a fold: eq 0.390 < pot_odds 0.427. 7.4 folding h25 was correct.
+   Stage B's cap made 7.5 *call* h25 — a −EV call, not a leak fix.
+
+**Consequence:** a correct 7.6 must fix the EQUITY / RANGE model (Leak 1), not
+pot-odds. Fixing pot-odds alone removes 7.4's accidental hand-38 fold. 7.4
+remains the submission but its hand-38 fold is fragile (bug-cancellation).
