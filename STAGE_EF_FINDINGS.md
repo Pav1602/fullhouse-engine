@@ -98,3 +98,36 @@ hand: bot's own modeled equity vs corrected pot odds (callable pot). Key rows:
 **Consequence:** a correct 7.6 must fix the EQUITY / RANGE model (Leak 1), not
 pot-odds. Fixing pot-odds alone removes 7.4's accidental hand-38 fold. 7.4
 remains the submission but its hand-38 fold is fragile (bug-cancellation).
+
+---
+
+## Stage 3 — Bug B diagnosis (2026-05-21)
+
+Probe (`probe_bugB.py`) dumped `aggressor_likely_range` for the hand-38 turn
+all-in, combo by combo. Confirmed:
+
+- `count_postflop_raises(aggressor) = 2` (flop raise + turn all-in).
+- Hits the `pf_raises == 2` branch → `_narrow_range(BTN-RFI, "medium")`.
+- Modeled range = `{AA,KK,QQ,JJ,TT,AKs,AKo,AQs,AJs,KQs}` — 10 combos.
+- A8dd equity vs that modeled range = **0.488**.
+
+Reference A8dd equities on `Qd 7d 3c 8c`:
+
+| range | equity |
+|---|---|
+| modeled range (the bug) | 0.488 |
+| strong `{AA,KK,QQ,JJ}` | 0.273 |
+| sets + AQ | 0.219 |
+| sets only `{QQ,88,77,33}` | 0.182 |
+
+**Root cause:** a turn ALL-IN is counted as just "a raise" — `count_postflop_
+raises` treats `all_in` identically to `raise`. flop-raise + turn-shove →
+`pf_raises == 2` → the "medium" tier, which includes `AKo/AKs/AJs/KQs` —
+ace-high and one-pair hands a competent player never stacks 170bb off with on
+the turn. The model narrows by raise **count**, not action **strength**.
+
+**Effect:** modeled eq 0.488 > Bug-A `required_eq` 0.366 → hand 38 calls.
+Narrowing to "strong" → eq ~0.27 < 0.366 → fold. But "strong" = `{AA,KK,QQ,JJ}`
+drops small sets (88/77/33) that *are* in a real shove range — a proxy, not
+exact. Stage 4 design (advisor): narrow on all-in detection; decide whether the
+"strong" tier suffices or a dedicated polarized shove range is needed.

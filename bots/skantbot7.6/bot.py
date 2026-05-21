@@ -1015,6 +1015,19 @@ def count_postflop_raises(state: dict, agg_seat: int) -> int:
     postflop_log = state.get("action_log", [])[pf_len:]
     return sum(1 for e in postflop_log if e.get("action") in ("raise", "all_in") and e.get("seat") == agg_seat)
 
+
+def _aggressor_last_action_is_allin(state: dict, agg_seat: int) -> bool:
+    """True if the aggressor's most recent action this hand was an all-in.
+
+    An all-in is the strongest possible action; the range model must respond to
+    action strength, not just raise count. See STAGE_EF_FINDINGS.md Stage 3.
+    """
+    for e in reversed(state.get("action_log", [])):
+        if e.get("seat") == agg_seat:
+            return e.get("action") == "all_in"
+    return False
+
+
 def _narrow_range(rng_dict: dict, strength: str, board: list = None) -> dict:
     strong = {"AA", "KK", "QQ", "JJ", "AKs", "AKo"}
     medium = strong | {"TT", "99", "88", "AQs", "AQo", "AJs", "AJo", "KQs", "KQo",
@@ -1061,25 +1074,36 @@ def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     else:
         base_range = RFI_FREQS.get(agg_pos, RFI_FREQS["LJ"])
         
-# 2. Narrow based on postflop aggression
+    # 2. Narrow based on postflop aggression
     pf_raises = count_postflop_raises(state, agg_seat)
     if pf_raises == 0:
         return base_range
-    elif pf_raises == 1:
-        # Single postflop raise: narrow slightly — opp's range is the "willing to barrel" subset.
-        # On paired boards specifically, a single barrel is heavily value-weighted.
-        board = state.get("community_cards", [])
-        board_strength = "medium"
+
+    board = state.get("community_cards", [])
+
+    # Strength tier implied by the raise COUNT.
+    if pf_raises == 1:
+        # Single postflop raise: the "willing to barrel" subset.
+        strength = "medium"
         if board and len(board) >= 3:
-            # Check for paired board — if paired, narrow more aggressively
+            # Paired board — a single barrel is heavily value-weighted.
             ranks = [c[0] for c in board]
             if len(ranks) != len(set(ranks)):
-                board_strength = "strong"
-        return _narrow_range(base_range, board_strength, board=board)
+                strength = "strong"
     elif pf_raises == 2:
-        return _narrow_range(base_range, "medium", board=state.get("community_cards", []))
+        strength = "medium"
     else:
-        return _narrow_range(base_range, "strong", board=state.get("community_cards", []))
+        strength = "strong"
+
+    # An all-in is the strongest possible action. Narrowing by raise count
+    # alone modelled the hand-38 turn shove as "medium" (incl. AK-high / AJ /
+    # KQ), giving A8dd ~49% equity vs a true ~25%. A turn/river shove is
+    # value-heavy — narrow to the tightest tier regardless of count.
+    # See STAGE_EF_FINDINGS.md Stage 3.
+    if _aggressor_last_action_is_allin(state, agg_seat):
+        strength = "strong"
+
+    return _narrow_range(base_range, strength, board=board)
 
 # ============================================================================
 # 9. PREFLOP DECISION

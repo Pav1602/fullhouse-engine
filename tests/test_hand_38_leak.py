@@ -223,6 +223,22 @@ if __name__ == "__main__":
             print(f"FAIL: {e}")
 
 
-# test_hand_38_v75_folds removed in the 7.6 cycle: it targeted the broken,
-# dead-end 7.5 bot and asserted == "call". The 7.6 hand-38 fold test is added
-# in Stage 4 once 7.6 exists, pointing at bots/skantbot7.6/bot.py.
+def test_hand_38_v76_folds():
+    """skantbot7.6 must fold hand 38 — for sound reasons (both leaks fixed).
+
+    Bug A (pot-odds callable-pot) corrects required_eq to ~0.37; Bug B (range
+    model narrows on all-in detection) drops modelled A8dd equity from ~0.49 to
+    ~0.28. 0.28 < 0.37 -> fold. Unlike 7.3/7.4 this is NOT bug-cancellation.
+
+    Run 5x: the equity MC is not yet seeded (pre-existing Bug C, see
+    STAGE_EF_FINDINGS.md), so decide() has minor noise. The fold decision is
+    stable well clear of the threshold; this asserts every run folds.
+    """
+    state = _build_hand_38_state()
+    state["your_cards"] = ["8d", "Ad"]
+    bot = _load_bot("bots/skantbot7.6/bot.py")
+    decisions = [bot.decide(dict(state)).get("action") for _ in range(5)]
+    print(f"\n[7.6] decisions: {decisions}")
+    assert all(d == "fold" for d in decisions), (
+        f"skantbot7.6 must fold hand 38 on every run, got: {decisions}"
+    )
