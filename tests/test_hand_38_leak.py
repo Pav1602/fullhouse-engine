@@ -162,32 +162,29 @@ def test_hand_38_bot_decision_overall():
     state["your_cards"] = ["8d", "Ad"]
     bot = _load_bot("bots/skantbot7.3/bot.py")
     decision = bot.decide(state)
-    print(f"\n[overall] vanilla 7 decision: {decision}")
+    print(f"\n[overall] skantbot7.3 decision: {decision}")
 
-    # PRE-FIX assertion (documents the leak):
-    assert decision.get("action") == "call", (
-        f"hand 38 leak still present: bot called instead of folding: {decision}"
+    # Correct action for hand 38 is FOLD. (7.3 reaches it via bug-cancellation,
+    # not a real fix — see STAGE_EF_FINDINGS.md — but the action is fold.)
+    assert decision.get("action") == "fold", (
+        f"hand 38: bot must fold the catastrophic spot, got: {decision}"
     )
-
-    # POST-FIX assertion — replace above with:
-    #   assert decision.get("action") == "call", (
-    #       f"hand 38 leak still present: bot called instead of folding: {decision}"
-    #   )
 
 
 def test_hand_38_skantbot7_3_same_leak():
-    """skantbot7.3 (Fix A4) DOES NOT fix hand 38.
+    """skantbot7.3 folds hand 38 — but via bug-cancellation, not a real fix.
 
-    Fix A4's gate is len(pf_raises)==2. In hand 38 pf_raises is uncounted-by-street
-    so len==4 — gate doesn't fire, wide RFI fallthrough runs.
+    7.3's equity model is still inflated (Leak 1 only half-fixed) AND its
+    pot-odds is still inflated (Leak 2 unfixed); the two errors cancel into a
+    fold. See STAGE_EF_FINDINGS.md. The action is fold; the reasoning is not sound.
     """
     state = _build_hand_38_state()
     state["your_cards"] = ["8d", "Ad"]
     bot = _load_bot("bots/skantbot7.3/bot.py")
     decision = bot.decide(state)
     print(f"\n[7.3] decision: {decision}")
-    assert decision.get("action") == "call", (
-        f"skantbot7.3 unexpectedly calls here: {decision}"
+    assert decision.get("action") == "fold", (
+        f"skantbot7.3 must fold hand 38, got: {decision}"
     )
 
 
@@ -204,8 +201,8 @@ def test_hand_38_v74_folds():
     
     decision = bot.decide(state)
     print(f"\n[7.4] decision: {decision}")
-    assert decision.get("action") == "call", (
-        f"skantbot7.4 unexpectedly calls here: {decision}"
+    assert decision.get("action") == "fold", (
+        f"skantbot7.4 must fold hand 38, got: {decision}"
     )
 
 if __name__ == "__main__":
@@ -226,15 +223,6 @@ if __name__ == "__main__":
             print(f"FAIL: {e}")
 
 
-
-def test_hand_38_v75_folds():
-    """skantbot7.5 must fold hand 38."""
-    state = _build_hand_38_state()
-    state["your_cards"] = ["8d", "Ad"]
-    bot = _load_bot("bots/skantbot7.5/bot.py")
-    
-    decision = bot.decide(state)
-    print(f"\n[7.5] decision: {decision}")
-    assert decision.get("action") == "call", (
-        f"skantbot7.5 expected to call (temporarily) here: {decision}"
-    )
+# test_hand_38_v75_folds removed in the 7.6 cycle: it targeted the broken,
+# dead-end 7.5 bot and asserted == "call". The 7.6 hand-38 fold test is added
+# in Stage 4 once 7.6 exists, pointing at bots/skantbot7.6/bot.py.
