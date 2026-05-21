@@ -69,3 +69,31 @@ the `Config` defaults and strip `import os` for the final submission.
 - tests/test_pav_bust_regression.py::test_hand_20 uses board cards that don't match the
   real hand 20 from pav_skantbot_7_bust.txt (real board was 8h 2c Jd | 2h, not 2s Js Qs | 3c).
   The bot folds in both, but for different reasons. Fix in 7.5 cycle.
+
+## [DEFERRED to 7.6] Stage B pot-odds fix is incomplete — caused hand-38 regression in 7.5
+
+- Stage B (7.5) applied `effective_owed = min(owed, stack)` but `pot_odds =
+  effective_owed / (pot + effective_owed)` still uses the raw `state["pot"]`,
+  which includes the opponent's UNCALLABLE excess when opp shoves > bot stack.
+- Numerator capped, denominator not. In all-in-over-stack spots pot_odds is
+  understated (hand 38: required_eq ~47% -> ~7%), so the bot calls thin.
+- Result: skantbot7.5 CALLS hand 38 (the catastrophic call). 7.3 and 7.4 fold it.
+  This is a regression on the single most important test case in the project.
+- Correct fix: cap `pot` to the callable amount (raw pot minus opp's uncallable
+  excess). Re-tuning the equity thresholds against the corrected formula likely
+  needs a fresh Optuna sweep.
+- 7.5 did NOT ship. `v7.4-stable` remains the submission. See STAGE_EF_FINDINGS.md.
+- REMEDIATION_PLAN_v75.md's claim "Stage B doesn't change hand 38" is false.
+
+## [BUG — test infra] hand-38 regression-test assertions are corrupted
+
+- tests/test_hand_38_leak.py: `test_hand_38_v74_folds`, `test_hand_38_v75_folds`
+  and `test_hand_38_bot_decision_overall` all assert `== "call"` while their
+  docstrings say "must fold"; the "POST-FIX assertion" comments are copy-paste
+  duplicates of the pre-fix code.
+- tests/test_pav_bust_regression_v75.py::test_hand_38 asserts `call` with a
+  flop-checked action sequence that doesn't match the bust log (real line:
+  flop-raise + turn-shove).
+- Running pytest as-is would green-light a bot that makes the hand-38
+  catastrophic call. Correct expected action for hand 38 is FOLD. Repair the
+  assertions before relying on these suites.
