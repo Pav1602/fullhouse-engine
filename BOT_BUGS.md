@@ -97,3 +97,36 @@ the `Config` defaults and strip `import os` for the final submission.
 - Running pytest as-is would green-light a bot that makes the hand-38
   catastrophic call. Correct expected action for hand 38 is FOLD. Repair the
   assertions before relying on these suites.
+
+## [RESOLVED in 7.6] Leak 1, Leak 2, and Bug C
+
+skantbot7.6 (`bots/skantbot7.6/bot.py`, branch `skantbot7.6/dev`) fixes both
+structural leaks plus a nondeterminism bug found during verification:
+
+- **Leak 2 / Bug A** — pot-odds now divides by the *callable* pot
+  (`pot - (owed - effective_owed)`), excluding the opponent's uncallable excess;
+  numerator capped via `effective_owed`; SPR likewise. The v75 Stage-B "fix"
+  capped only the numerator — incomplete, and the cause of the 7.5 regression.
+- **Leak 1 / Bug B** — `aggressor_likely_range` now narrows to the tightest
+  tier when the aggressor's last action was an all-in
+  (`_aggressor_last_action_is_allin`). Previously a turn shove was modelled as
+  "medium" (incl. AK-high), over-stating A8dd equity ~2x (~0.49 vs true ~0.25).
+- **Bug C** — the equity Monte Carlo used unseeded global `random`, and
+  `get_hand_rng` seeded from process-randomised `hash()`. Fixed: seeded `rng`
+  threaded through both equity functions; `get_hand_rng` uses `zlib.crc32`. The
+  bot is now deterministic given game state (verified cross-process).
+
+hand 38 now folds for sound reasons (correct pot-odds vs a correctly-narrowed
+range), not 7.4's bug-cancellation. All exit criteria met; heldout +183/match
+vs 7.4; +875/+1500 vs the adversarial bots. See STAGE_EF_FINDINGS.md. **7.6 is
+the ship candidate.** The corrupted hand-38 test assertions (above) were fixed
+in 7.6 Stage 0.
+
+## [STILL OPEN — 7.7] Mode A — over-aggression in c-bet/barrel
+
+7.6 does NOT fix Mode A (over-wide c-bet/barrel → bloated pots, 7 of 12 big
+losses in Pav's bust). Partial mitigation: 7.6's correct fold-to-shove means
+when a Mode-A pot gets jammed on, the bot folds correctly instead of punting —
+so Mode A's *tail* risk is smaller, but the root frequency issue remains. Full
+fix is a 7.7 cycle (lower cbet/bluff frequencies; likely structural, not just
+a param tweak — trial 741 showed param-tuning alone didn't move it).
