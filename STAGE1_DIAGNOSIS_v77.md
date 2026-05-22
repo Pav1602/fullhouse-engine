@@ -255,3 +255,44 @@ is a legitimate call, not a defeat.
   `SKANT_PROBE_DIR`; bit-identical to 7.6 when unset).
 - `harness/probe_7_6_analyze.py` — analysis.
 - `harness/results/probe_7_6/`, `probe_7_6_hu/` — raw JSONL (not committed).
+
+## Stage 2 — outcome (final)
+
+**Shipped: Phase 2a only.** Option 3 — `aggressor_likely_range` narrowing
+scaled by the opponent's observed re-raise frequency. The upstream fix: a
+100%-raiser's raise carries no information, a 15%-raiser's signals strength;
+range-narrowing is now proportional to that. Degrades exactly to 7.6 when
+`reraise_freq ≈ 0.15` (the population prior). Trace-verified against probe
+runtime values in `TRACE_2A_LIVE_v77.md`.
+
+**Phase 2b (preflop 4-bet gate) — coded, then stripped, deferred.** A probe
+of 7.7 vs `min_raiser` (5,981 hands) recorded the gate firing **0 times**:
+Phase 2a busts `min_raiser` in 22–44 hands, before the postflop re-raise
+detector converges. The change could not be runtime-verified because it is
+never reached in real play — and the methodology does not ship a change no
+probe can observe. Stripped from the submission bot (`git checkout HEAD`);
+the strip is a no-op (0 fires in the 5,981-hand `min_raiser` probe;
+deterministic-opponent CRN shows `Diff = 0.0` in both the 2a+2b and the
+stripped HU runs, consistent with no fires elsewhere). Trace in
+`TRACE_2B_v77.md`. Revisit in 7.8 only if a real opponent surfaces who
+triggers it without busting first.
+
+**Phase 2c (`is_calling_station` misclassification) — deferred.** The 7.7
+probe found the canonical 2c spot (river bluff-*raise* at `eq ≈ 0`, raising
+over `min_raiser`'s bet) occurs **0 times** in 5,981 hands. The 2c *root*
+survives only as river bluff-*bets* (barrels into a never-folder) — but that
+is **Mode A** (wide barrelling), already classified "real but the pool
+prices it +EV, do not chase". Fixing it means touching `is_calling_station`,
+a classifier shared across all 23 matchups. Out of 7.7 scope; belongs with
+the deferred Mode A work. Probe: `harness/probe_2c_analyze.py`.
+
+### Final verification — all locked criteria PASS (stripped 2a-only bot)
+
+| # | criterion | result |
+|---|-----------|--------|
+| 1 | HU `min_raiser` ≥ +1,400 | **+7,455 ± 735** (7.6 −2,100 → 7.7 +5,355), >10 SE |
+| 2 | HU regression guard | worst drop −96 (1.23 SE); no flips; 22-matchup aggregate **+532** |
+| 3 | 6-max paired-diff ≥ 0 | aggregate **+6,400** (+278/matchup) |
+| 4 | validator / determinism / bust-suite | PASS / `Diff = 0.0` (11 det. opps) / 10/10, no regression |
+
+7.7 (Phase 2a) **clearly beats 7.6** — the ship bar is met.

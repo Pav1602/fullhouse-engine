@@ -146,6 +146,8 @@ def _probe_hand_summary(game_state):
                 "pfr_pos": p.n_pos["pfr"], "pfr_obs": p.n_obs["pfr"],
                 "3bet_pos": p.n_pos["three_bet"], "3bet_obs": p.n_obs["three_bet"],
                 "post_br": p.postflop_bets_raises, "post_calls": p.postflop_calls,
+                "faced_bet": p.faced_bet_postflop,
+                "raised_when_faced": p.raised_when_faced_postflop,
             }
         _probe_emit({"type": "opp_profiles",
                      "match_id": _probe_os.environ.get("SKANT_MATCH_ID", ""),
@@ -615,6 +617,10 @@ class BehaviouralProfile:
         self.postflop_bets_raises = 0
         self.postflop_calls = 0
 
+        # Re-raise frequency: how often opponent RAISES when FACING a bet
+        self.faced_bet_postflop = 0
+        self.raised_when_faced_postflop = 0
+
         # Sizing tracking — list of (bet_size / pot_at_decision) ratios
         self.bet_size_pcts = []
 
@@ -747,7 +753,13 @@ def update_opponents_from_log(state: dict):
                 if action in ("raise", "all_in", "call"):
                     opp.postflop_calls += (action == "call")
                     opp.postflop_bets_raises += (action in ("raise", "all_in"))
-                    
+
+                # Re-raise frequency: facing a bet = last_bettor is set AND it's not us
+                if last_bettor is not None and action in ("raise", "all_in", "call", "fold"):
+                    opp.faced_bet_postflop += 1
+                    if action in ("raise", "all_in"):
+                        opp.raised_when_faced_postflop += 1
+
                 if action in ("raise", "all_in"):
                     if last_bettor is None:
                         if bot_id != pf_aggressor and pf_aggressor is not None:
@@ -1201,28 +1213,43 @@ def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
         strength = "strong"
 
     narrowed = _narrow_range(base_range, strength, board=board)
-    # PROBE SHADOW (Stage 2a design): compute the raise-freq-scaled proposed
-    # range. Read-only — `narrowed` (current behaviour) is still returned.
-    try:
-        agg_bid = next((p.get("bot_id") for p in state.get("players", [])
-                        if p.get("seat") == agg_seat), None)
-        prof = OPPONENTS.get(agg_bid) if agg_bid else None
-        if prof is not None:
-            br, ca = prof.postflop_bets_raises, prof.postflop_calls
-        else:
-            br, ca = 0, 0
-        # Bayesian postflop raise-freq: prior 0.35, weight 20 (alpha 7, beta 13)
-        raise_freq = (br + 7.0) / (br + ca + 20.0)
-        w = 1.0 - raise_freq  # fraction of the narrowing to apply
+
+    # Phase 2a LIVE FIX: scale narrowing by opponent's true re-raise frequency.
+    # A 100%-raiser's raise signals nothing → keep base_range.
+    # A 15%-raiser's raise signals strength → keep narrowed range.
+    # Bayesian re-raise freq: prior 0.15 (alpha=3, beta=17), weight 20.
+    agg_bid = next((p.get("bot_id") for p in state.get("players", [])
+                    if p.get("seat") == agg_seat), None)
+    prof = OPPONENTS.get(agg_bid) if agg_bid else None
+    if prof is not None:
+        fb = prof.faced_bet_postflop
+        rwf = prof.raised_when_faced_postflop
+    else:
+        fb, rwf = 0, 0
+    reraise_freq = (rwf + 3.0) / (fb + 20.0)
+    # Only un-narrow for excess above population baseline (0.15).
+    # Normal opponent at 0.15 → w=1.0 (full narrowing preserved).
+    # min_raiser at 0.69 → w=0.36 (64% un-narrowed).
+    excess = max(0.0, reraise_freq - 0.15)
+    w = max(0.0, 1.0 - excess / 0.85)
+    if w >= 0.999:
+        result = narrowed
+    else:
         keys = set(narrowed) | set(base_range)
-        proposed = {h: narrowed.get(h, 0.0) * w + base_range.get(h, 0.0) * (1.0 - w)
-                    for h in keys}
-        _PROBE_TRACE["agg_raise_freq"] = round(raise_freq, 3)
-        _PROBE_TRACE["_proposed_range"] = proposed
+        result = {h: narrowed.get(h, 0.0) * w + base_range.get(h, 0.0) * (1.0 - w)
+                  for h in keys}
+
+    # Probe trace (diagnostic — does not affect decisions)
+    if _PROBE_DIR:
+        _PROBE_TRACE["agg_reraise_freq"] = round(reraise_freq, 3)
+        _PROBE_TRACE["agg_faced_bet"] = fb
+        _PROBE_TRACE["agg_raised_when_faced"] = rwf
+        _PROBE_TRACE["agg_w"] = round(w, 3)
+        _PROBE_TRACE["_proposed_range"] = result
+        _PROBE_TRACE["_narrowed_range"] = dict(narrowed)
         _PROBE_TRACE["_base_range"] = dict(base_range)
-    except Exception:
-        pass
-    return narrowed
+
+    return result
 
 # ============================================================================
 # 9. PREFLOP DECISION
@@ -1412,17 +1439,34 @@ def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
                 return {"action": "all_in"}
             return {"action": "fold"}
 
-        # Standard 4-bet for value
-        value_freq = lookup_freq(FOURBET_VALUE_FREQS, hand)
-        eff_4bet = _effective_freq(value_freq, position, "fourbet", stack_bb, n_active, cfg)
+        # Phase 2b gate: vs indiscriminate re-raisers (reraise_freq > 0.35), only 4-bet jam-range hands.
+        skip_fourbet = False
         if opp_profile is not None:
-            tb_rate = opp_profile.stat("three_bet")
-            eff_4bet *= 1.0 + cfg.k_4bet_vs_3bet_freq * max(0, tb_rate - 0.10)
-        if eff_4bet > 0 and rng.random() < eff_4bet:
-            return {"action": "raise", "amount": safe_raise_amount(state, proposed_4bet)}
+            fb = opp_profile.faced_bet_postflop
+            rwf = opp_profile.raised_when_faced_postflop
+            reraise_freq = (rwf + 3.0) / (fb + 20.0)
+            if reraise_freq > 0.35:
+                jam_hand = (lookup_freq(FIVEBET_FREQS, hand) > 0 or hand in TIGHT_MONSTERS)
+                if not jam_hand:
+                    skip_fourbet = True
+                    if _PROBE_DIR:
+                        _PROBE_TRACE["phase2b_gate_fired"] = True
+                        _PROBE_TRACE["opp_reraise_freq"] = round(reraise_freq, 3)
+                        _PROBE_TRACE["opp_faced_bet"] = fb
+                        _PROBE_TRACE["opp_raised_when_faced"] = rwf
 
-        # 4-bet bluff with blockers - not vs maniacs
-        if not facing_maniac and ip:
+        # Standard 4-bet for value
+        if not skip_fourbet:
+            value_freq = lookup_freq(FOURBET_VALUE_FREQS, hand)
+            eff_4bet = _effective_freq(value_freq, position, "fourbet", stack_bb, n_active, cfg)
+            if opp_profile is not None:
+                tb_rate = opp_profile.stat("three_bet")
+                eff_4bet *= 1.0 + cfg.k_4bet_vs_3bet_freq * max(0, tb_rate - 0.10)
+            if eff_4bet > 0 and rng.random() < eff_4bet:
+                return {"action": "raise", "amount": safe_raise_amount(state, proposed_4bet)}
+
+        # 4-bet bluff with blockers - not vs maniacs, not vs indiscriminate re-raisers
+        if not facing_maniac and not skip_fourbet and ip:
             bluff_freq = lookup_freq(FOURBET_BLUFF_FREQS, hand)
             if bluff_freq > 0 and rng.random() < cfg.fourbet_bluff_freq:
                 return {"action": "raise", "amount": safe_raise_amount(state, proposed_4bet)}
@@ -1659,17 +1703,20 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     _PROBE_TRACE["eq"] = round(float(eq), 4)
     _PROBE_TRACE["was_pf_aggressor"] = bool(was_pf_aggressor)
 
-    # PROBE SHADOW: eq vs the proposed (raise-freq-scaled) range and vs the
-    # un-narrowed base range. Uses fresh deterministic RNGs (get_hand_rng),
-    # so the main `rng` and the bot's real decision are untouched.
-    if _PROBE_DIR and _PROBE_TRACE.get("_proposed_range") is not None:
+    # PROBE SHADOW: eq vs narrowed (7.6 behaviour) and base (un-narrowed).
+    # Main `eq` uses the blended range (7.7 behaviour).
+    if _PROBE_DIR and _PROBE_TRACE.get("_base_range") is not None:
         try:
-            eq_prop = equity_vs_range(hole, board, _PROBE_TRACE["_proposed_range"],
-                                      n_sims=n_sims, rng=get_hand_rng(state))
             eq_base = equity_vs_range(hole, board, _PROBE_TRACE["_base_range"],
                                       n_sims=n_sims, rng=get_hand_rng(state))
-            _PROBE_TRACE["eq_proposed"] = round(float(eq_prop), 4)
             _PROBE_TRACE["eq_base"] = round(float(eq_base), 4)
+        except Exception:
+            pass
+        try:
+            if _PROBE_TRACE.get("_narrowed_range") is not None:
+                eq_narrowed = equity_vs_range(hole, board, _PROBE_TRACE["_narrowed_range"],
+                                             n_sims=n_sims, rng=get_hand_rng(state))
+                _PROBE_TRACE["eq_narrowed"] = round(float(eq_narrowed), 4)
         except Exception:
             pass
 
@@ -1911,7 +1958,9 @@ def _probe_record(game_state, position, hand, street, action):
             rec["bet_this_street"] = game_state.get("your_bet_this_street", 0)
             for k in ("pot_odds", "risk_pct", "variance_term", "required_eq",
                       "effective_owed", "spr", "commitment_factor",
-                      "agg_raise_freq", "eq_proposed", "eq_base"):
+                      "agg_reraise_freq", "agg_faced_bet",
+                      "agg_raised_when_faced", "agg_w",
+                      "eq_narrowed", "eq_base"):
                 rec[k] = _PROBE_TRACE.get(k)
         _probe_emit(rec)
     except Exception:
