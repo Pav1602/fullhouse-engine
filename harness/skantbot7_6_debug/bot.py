@@ -1739,6 +1739,12 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     variance_term = cfg.variance_c * (risk_pct ** 2)
     required_eq = pot_odds + cfg.pot_odds_buffer_normal + variance_term + cold_caution_call
 
+    _PROBE_TRACE["pot_odds"] = round(pot_odds, 4)
+    _PROBE_TRACE["risk_pct"] = round(risk_pct, 4)
+    _PROBE_TRACE["variance_term"] = round(variance_term, 5)
+    _PROBE_TRACE["required_eq"] = round(required_eq, 4)
+    _PROBE_TRACE["effective_owed"] = effective_owed
+
     if eq >= cfg.equity_raise_threshold and not facing_maniac:
         sizing = cfg.sizing_value
         if opp_profile is not None:
@@ -1753,6 +1759,9 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     # SPR Commitment Regime — callable_pot, not raw pot (same uncallable-excess fix).
     spr = stack / max(callable_pot, 1)
     commitment_factor = 1.0 / (1.0 + math.exp((spr - cfg.spr_commit_threshold) / cfg.spr_smoothness))
+
+    _PROBE_TRACE["spr"] = round(spr, 3)
+    _PROBE_TRACE["commitment_factor"] = round(commitment_factor, 4)
 
     if eq >= (cfg.equity_value_bet - cfg.k_commit * commitment_factor) and variance_term <= 0:
         return {"action": "call"}
@@ -1847,6 +1856,13 @@ def _probe_record(game_state, position, hand, street, action):
             rec["eq"] = _PROBE_TRACE.get("eq")
             rec["was_pf_aggressor"] = _PROBE_TRACE.get("was_pf_aggressor")
             rec["facing_bet"] = game_state.get("amount_owed", 0) > 0
+            rec["committed_this_hand"] = sum(
+                e.get("amount", 0) for e in game_state.get("action_log", [])
+                if e.get("seat") == me)
+            rec["bet_this_street"] = game_state.get("your_bet_this_street", 0)
+            for k in ("pot_odds", "risk_pct", "variance_term", "required_eq",
+                      "effective_owed", "spr", "commitment_factor"):
+                rec[k] = _PROBE_TRACE.get(k)
         _probe_emit(rec)
     except Exception:
         pass

@@ -144,19 +144,44 @@ near-all-in (`chips_to_raise >= stack`). So a "3-bet it off the pot" fix
 will not work as stated; 3-betting wider just escalates the pot. Any fix
 path's efficacy must be **measured**, not assumed.
 
-## Stage-2 options (ship/no-ship — user + advisor gate)
+## Trace-table breakdown of the leak (real probed hands)
 
-Expected gain is similar for both fix paths; **risk diverges**:
+Every `min_raiser` HU big-loss hand (≥1,500 chips, n≈63) was traced
+decision-by-decision with the bot's actual internal values (`eq`,
+`pot_odds`, `required_eq`, `commitment_factor`, cumulative committed).
+The leak is **multi-headed**:
 
-| path | expected gain | risk |
-|------|---------------|------|
-| **Ship 7.6 now** | 0 vs 7.6 | none |
-| Preflop change vs min-raisers (3-bet/aggression boost, gated on `opp_profile.rfi`) | +1,500–2,500 vs `min_raiser`; ≈0 elsewhere if gated | low — narrow, easy regression check; **efficacy unverified** (see note above) |
-| Cumulative-commitment guard (postflop structural) | +1,500–2,500 vs `min_raiser`; unknown vs others | medium — touches the postflop call hot path where the 7.6 +183 heldout gain lives |
+| component | ~count | mechanism | fix |
+|-----------|--------|-----------|-----|
+| Postflop light-call invest-then-fold | ~14 | calls each cheap min-bet on local pot odds (`required_eq` has no whole-hand commitment term); buries chips with a losing hand, then folds | **Phase 2a** |
+| Preflop 4-bet-war then fold (AKo/QQ) | ~15 | 4-bets a hand in the 4-bet *value* range but **not** the jam range; min_raiser always re-raises → forced fold after a 3–5k investment | **Phase 2b** |
+| Bluff-raise into a never-folder | ~8 | river bluff-raise at `eq≈0` — `is_calling_station` misclassifies min_raiser (always-raises ⇒ high agg factor) as aggressive, not station-equivalent | **Phase 2c (deferred)** |
+| Showdown losses, peak eq > 0.50 | ~19 | got chips in good (mean peak eq 0.74) and lost | **variance — not a leak, do not chase** |
 
-**Recommendation:** if pursuing 7.7, try the **narrow preflop path first**
-(smallest blast radius); escalate to the structural guard only if it cannot
-move the metric; ship 7.6 if neither clears the criteria below.
+Confirmed: skantbot makes only 18 all-in decisions in 2,803 hands vs
+min_raiser, all AA/KK/AKs — stack-off discipline is fine. Buried chips are
+~90% postflop (preflop share median 10%).
+
+## Stage-2 scope (advisor-reconciled)
+
+One unifying principle — **don't escalate a pot with a hand you won't
+follow through on** — applied at the two sites the trace exposed:
+
+- **Phase 2a** — postflop cumulative-commitment guard: add a whole-hand
+  committed-fraction term to `required_eq` so a marginal hand folds
+  *early* (decision 2 of an escalating line, not decision 5). Strictly
+  additive — only tightens, never loosens, never touches value/raise paths.
+- **Phase 2b** — preflop 4-bet-range gate: when facing a 3-bet from an
+  opponent whose re-raise frequency is ≈100% (`opp_profile.rfi` far right
+  tail — `min_raiser`/`minbet_bot`), do not 4-bet a hand that is not also
+  in the jam range. Profile-gated so it does not touch 4-bet ranges vs the
+  other 22 opponents.
+- **Phase 2c (deferred)** — `is_calling_station` misclassification.
+  Deferred: three concurrent fixes would muddy the regression criteria.
+
+2a and 2b share one regression run and **ship together or not at all**.
+No sweep — both are structural gates; thresholds chosen by inspection,
+round numbers, no tuning. Each is trace-tabled before any code edit.
 
 ## Locked success criteria — write once, do not move
 
