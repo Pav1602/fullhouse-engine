@@ -10,8 +10,8 @@ from sandbox.match import run_match
 from harness.opponents.registry import load_pool
 
 parser = argparse.ArgumentParser(description="Play 6-max against skantbot + 4 random opponents")
-parser.add_argument("--bot", default="skantbot7.6",
-                    help="Skantbot version to include (default: skantbot7.6). Examples: skantbot7, skantbot7.3")
+parser.add_argument("--bot", default="skantbot7.7",
+                    help="Skantbot version to include (default: skantbot7.7). Examples: skantbot7, skantbot7.3")
 parser.add_argument("--hands", type=int, default=200, help="Hands per match (default: 200)")
 parser.add_argument("--seed", type=int, default=None, help="Optional seed for reproducible deck + opponent draw")
 args = parser.parse_args()
