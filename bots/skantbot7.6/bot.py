@@ -46,6 +46,7 @@ import random
 import math
 import time
 import statistics
+import zlib
 from dataclasses import dataclass, fields
 INITIAL_STACK = 10000
 our_match_delta = 0
@@ -479,7 +480,11 @@ def get_hand_rng(state: dict) -> random.Random:
     hand_id = state.get("hand_id", "")
     seat = state.get("seat_to_act", 0)
     seed_str = f"{hand_id}_{seat}"
-    return random.Random(hash(seed_str) & 0xFFFFFFFF)
+    # zlib.crc32 is process-stable; Python's built-in hash() of a str is
+    # randomised per process (PYTHONHASHSEED), which made the bot's RNG —
+    # and therefore CRN — nondeterministic across processes. See Bug C,
+    # STAGE_EF_FINDINGS.md.
+    return random.Random(zlib.crc32(seed_str.encode()))
 
 
 
@@ -895,7 +900,8 @@ def _equity_heuristic(hole: List[str]) -> float:
 
 
 def equity_vs_random(hole_cards: List[str], community_cards: List[str],
-                     n_sims: int = 300, n_opp: int = 1) -> float:
+                     n_sims: int = 300, n_opp: int = 1,
+                     rng: random.Random = None) -> float:
     """Monte Carlo equity vs random opponent hand(s)."""
     if not HAVE_EVAL7:
         return _equity_heuristic(hole_cards)
@@ -913,7 +919,7 @@ def equity_vs_random(hole_cards: List[str], community_cards: List[str],
         wins = ties = 0
         needed = 5 - len(board)
         for _ in range(n_sims):
-            sample = random.sample(deck, 2 * n_opp + needed)
+            sample = (rng or random).sample(deck, 2 * n_opp + needed)
             opp_hands = [sample[i:i+2] for i in range(0, 2 * n_opp, 2)]
             full_board = board + sample[2 * n_opp:]
             my_score = eval7.evaluate(my_cards + full_board)
@@ -962,10 +968,11 @@ def _hand_class_to_combos(hand_class: str, used: set) -> List[Tuple[str, str]]:
 
 
 def equity_vs_range(hole_cards: List[str], community_cards: List[str],
-                    villain_range: Dict[str, float], n_sims: int = 300) -> float:
+                    villain_range: Dict[str, float], n_sims: int = 300,
+                    rng: random.Random = None) -> float:
     """Monte Carlo equity vs a frequency-weighted range."""
     if not HAVE_EVAL7 or not villain_range:
-        return equity_vs_random(hole_cards, community_cards, n_sims)
+        return equity_vs_random(hole_cards, community_cards, n_sims, rng=rng)
 
     try:
         my_cards = [eval7.Card(c) for c in hole_cards]
@@ -983,19 +990,19 @@ def equity_vs_range(hole_cards: List[str], community_cards: List[str],
                 weighted_combos.append((combo, freq))
 
         if not weighted_combos:
-            return equity_vs_random(hole_cards, community_cards, n_sims)
+            return equity_vs_random(hole_cards, community_cards, n_sims, rng=rng)
 
         wins = ties = 0
         needed = 5 - len(board)
         # Build weighted choice list
         weights = [w for _, w in weighted_combos]
         for _ in range(n_sims):
-            v_combo, _ = random.choices(weighted_combos, weights=weights, k=1)[0]
+            v_combo, _ = (rng or random).choices(weighted_combos, weights=weights, k=1)[0]
             v_str = {v_combo[0], v_combo[1]}
             avail = [c for c in deck_strs if c not in v_str]
             if len(avail) < needed:
                 continue
-            extra = random.sample(avail, needed) if needed > 0 else []
+            extra = (rng or random).sample(avail, needed) if needed > 0 else []
             full_board = board + [eval7.Card(c) for c in extra]
             v_cards = [eval7.Card(c) for c in v_combo]
             my_score = eval7.evaluate(my_cards + full_board)
@@ -1006,7 +1013,7 @@ def equity_vs_range(hole_cards: List[str], community_cards: List[str],
                 ties += 1
         return (wins + ties / 2) / max(n_sims, 1)
     except Exception:
-        return equity_vs_random(hole_cards, community_cards, n_sims)
+        return equity_vs_random(hole_cards, community_cards, n_sims, rng=rng)
 
 
 
@@ -1158,7 +1165,7 @@ def passes_variance_check(state: dict, owed: int, hole: list, cfg: Config) -> bo
     callable_pot = pot - (owed - effective_owed)
     pot_odds = effective_owed / (callable_pot + effective_owed) if (callable_pot + effective_owed) > 0 else 1.0
     required_eq = pot_odds + variance_term
-    eq = equity_vs_random(hole, [], n_sims=100)
+    eq = equity_vs_random(hole, [], n_sims=100, rng=get_hand_rng(state))
     return eq >= required_eq
 
 def decide_preflop_6max(state: dict, position: str, hand: str, cfg: Config,
@@ -1517,9 +1524,9 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     agg_seat = find_aggressor_seat(state)
     if agg_seat is not None and len(log) > 4:
         v_range = aggressor_likely_range(state, agg_seat)
-        eq = equity_vs_range(hole, board, v_range, n_sims=n_sims)
+        eq = equity_vs_range(hole, board, v_range, n_sims=n_sims, rng=rng)
     else:
-        eq = equity_vs_random(hole, board, n_sims=n_sims, n_opp=min(n_opp, 3))
+        eq = equity_vs_random(hole, board, n_sims=n_sims, n_opp=min(n_opp, 3), rng=rng)
 
     texture = board_texture(board)
     in_position = position in ("CO", "BTN")

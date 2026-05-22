@@ -131,3 +131,36 @@ Narrowing to "strong" → eq ~0.27 < 0.366 → fold. But "strong" = `{AA,KK,QQ,J
 drops small sets (88/77/33) that *are* in a real shove range — a proxy, not
 exact. Stage 4 design (advisor): narrow on all-in detection; decide whether the
 "strong" tier suffices or a dedicated polarized shove range is needed.
+
+---
+
+## Stage 5a — Bug C: equity RNG was nondeterministic (2026-05-22)
+
+Found while verifying Stage 4. The bot's equity Monte Carlo was nondeterministic
+— two layers:
+
+- **Layer 1:** `equity_vs_range` / `equity_vs_random` used the *global* `random`
+  module (`random.choices` / `random.sample`), not the bot's seeded RNG. 8
+  `decide()` calls on an identical state gave 8 different equities.
+- **Layer 2:** the seeded-RNG helper `get_hand_rng()` seeded from
+  `hash(seed_str)` — Python's `str` hash is randomised per process
+  (`PYTHONHASHSEED`), and the harness does not pin it. So even after routing
+  equity through `get_hand_rng`, equity was deterministic *within* a process
+  but differed *across* processes (0.280 vs 0.320 for the same hand-38 spot).
+
+**Why it was never caught:** the CRN self-compare acceptance test `compare(X,X)`
+reads 0.0 — but via the fast-path copy (`bot_a_path == bot_b_path` → `b_* :=
+a_*`), so it never actually exercised bot determinism.
+
+**Fix:** (1) thread the seeded `rng` through both equity functions and all 3
+call sites; (2) `get_hand_rng` now uses `zlib.crc32` (process-stable) instead of
+`hash()`.
+
+**Verified:** 4 separate processes → hand-38 eq = 0.260000 identical; hand 38
+folds; bust-log regression vs 7.4 = 0 hands changed; validator PASSED; 25/25
+tests. The real determinism gate is this cross-process eq test, *not* the CRN
+self-compare (a fast-path copy artifact).
+
+**Effect on past work:** the v75 1000-trial sweep ran with this nondeterminism
+— CRN was only ~30% effective (deck-sharing only), per memory. Its results are
+noisier than assumed but not invalid; not worth redoing.
