@@ -164,3 +164,22 @@ self-compare (a fast-path copy artifact).
 **Effect on past work:** the v75 1000-trial sweep ran with this nondeterminism
 — CRN was only ~30% effective (deck-sharing only), per memory. Its results are
 noisier than assumed but not invalid; not worth redoing.
+
+---
+
+## Stage 5b — full regression vs 7.4 (2026-05-22)
+
+CRN-paired compare, A=7.6 B=7.4, `paired_diff = 7.6 − 7.4` (positive = 7.6 better).
+
+- **HELDOUT** (UNSEEN_VALIDATION, 6-max, 50 seeds): every opponent positive,
+  +50 to +349, **MEAN +183.3**, WORST +50.0. 7.6 is not worse than 7.4 — it is
+  consistently (7/7 opponents) a small amount better. Magnitude sits within the
+  heldout noise band; the 7/7-positive *sign consistency* is the real signal.
+- **ADVERSARIAL** (cbet_punisher / sticky_trap, HU, 80 seeds): **+875 / +1500**.
+  7.6 handles shove-heavy adversaries far better — expected, since Bug A+B fix
+  exactly the over-call-vs-shove behaviour these bots exploit.
+
+**All 7.6 exit criteria met:** validator clean; hand 38 folds (deterministic,
+sound reasoning); hand 25 folds; 25/25 tests; bust diff vs 7.4 = 0 hands;
+heldout ≥ −100 (+183.3); adversarial ≥ −500 (+875). 7.6 is structurally
+complete and a verified improvement on 7.4. Stage 6 (sweep-gating) is next.
