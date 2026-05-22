@@ -137,6 +137,19 @@ def _probe_hand_summary(game_state):
             "was_hu": _PROBE_HAND["was_hu"],
         }
         _probe_emit(rec)
+        # opponent-profile snapshot — one record per hand_complete; analysis
+        # keeps the last (most-observed) per opponent per match.
+        profs = {}
+        for bid, p in OPPONENTS.items():
+            profs[bid] = {
+                "hands": p.hands_observed,
+                "pfr_pos": p.n_pos["pfr"], "pfr_obs": p.n_obs["pfr"],
+                "3bet_pos": p.n_pos["three_bet"], "3bet_obs": p.n_obs["three_bet"],
+                "post_br": p.postflop_bets_raises, "post_calls": p.postflop_calls,
+            }
+        _probe_emit({"type": "opp_profiles",
+                     "match_id": _probe_os.environ.get("SKANT_MATCH_ID", ""),
+                     "hand_id": game_state.get("hand_id"), "profiles": profs})
     except Exception:
         pass
 
