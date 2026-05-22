@@ -183,6 +183,58 @@ follow through on** — applied at the two sites the trace exposed:
 No sweep — both are structural gates; thresholds chosen by inspection,
 round numbers, no tuning. Each is trace-tabled before any code edit.
 
+## UPDATE 2 — trace tables converge all three on ONE root
+
+Tracing the "2a postflop" hands decision-by-decision showed they are **not**
+a commitment-leak: every postflop call the bot makes already satisfies
+`eq ≥ pot_odds + buffer`, so each call is +EV by immediate pot odds. The
+real −EV decision in those hands is a **river value-raise that the bot then
+folds to a min-re-raise** — because its equity estimate *collapses* when
+min_raiser re-raises.
+
+`aggressor_likely_range` narrows an opponent's assumed range to "strong"
+based on postflop raise **count**. min_raiser min-raises every street with
+its entire range, so the model narrows it to a value range it does not
+have. Verified on 561 raise→faced-reraise pairs vs min_raiser: the bot's eq
+estimate drops by **mean 0.16, up to 0.67** when min_raiser re-raises — 20×
+the MC noise SD (~0.03 at n_sims 300–600). Not noise.
+
+**All three symptoms share one root:** skantbot's models assume opponents
+raise for value / strength.
+- `aggressor_likely_range`: raise ⇒ narrow to strong ⇒ eq collapses ⇒ folds
+  hands that crush min_raiser's true (any-two) range. (the 2a hands)
+- Preflop 4-bet: assumes a 4-bet buys fold equity / faces a capped range —
+  min_raiser re-raises any two. (2b)
+- `is_calling_station`: keys on passivity; min_raiser is hyper-aggressive so
+  is never flagged ⇒ the bot bluffs a never-folder. (2c)
+
+## The honest robustness limitation
+
+Any fix needs a detector for "this opponent raises indiscriminately." That
+detector is **itself keyed to the min_raiser archetype** — it makes the bot
+robust *to literal min_raiser*, not to "all sorts of random stuff." A real
+Day-5 opponent who raises wide-but-not-100% would not trigger it cleanly.
+
+The diagnosis has pivoted three times (eq_override → frog-boil → range
+model), each time honestly and trace-driven. The leak "keeps moving"
+because min_raiser is pathologically simple and the training pool contains
+nothing else like it — it is hard to diagnose against and a fix is unlikely
+to transfer to the tournament field. With the ~June 1 deadline, **ship 7.6**
+is a legitimate call, not a defeat.
+
+## Decision options (user)
+
+1. **Ship 7.6** — accept the one losing HU matchup (a pure archetype
+   unlikely at the real table); spend no more time.
+2. **Narrow patch** — skip `aggressor_likely_range` narrowing when the
+   opponent's observed raise frequency > ~0.85 and ≥2 postflop raises.
+   Low-risk, fixes min_raiser, but an archetype-keyed exploit patch.
+3. **Principled fix** — make range-narrowing *proportional to the
+   opponent's observed raise frequency* (a 100%-raiser's raise signals
+   nothing; a 15%-raiser's raise signals strength). Generalises — the
+   correct model — but a larger change to opponent modelling, more
+   regression surface.
+
 ## Locked success criteria — write once, do not move
 
 1. HU vs `min_raiser`: improvement ≥ +1,400 (≈ 3 SE; −2,493 → ≥ −1,100).
