@@ -129,36 +129,48 @@ HU baseline, 7.6 vs pool, **n=200 seeds**:
 loss is statistically solid (not the marginal n=40 signal). True cost
 ≈ −2,500 chips/match HU.
 
-## Stage-2 scope and locked success criteria
+## The leak is real but narrow — and may not transfer
 
-**Scope:** narrowly the **frog-boiling bust pattern** — skantbot has no
-cumulative-commitment sense in the postflop call path; it accepts each
-cheap min-raise on local pot odds and stacks off. The fix is a
-cumulative-commitment guard (track total chips committed this hand /
-this line; tighten the call requirement as cumulative commitment rises).
-NOT a sweep — this is a structural gate, not a parameter to tune.
+`min_raiser` is a **pure archetype**: it min-raises *every street, every
+decision*, escalating to all-in. The bust pattern (60/40 against skantbot)
+is a Bernoulli-on-busts process: ~95% of matches end in a bust either way.
+A real Day-5 opponent who min-*opens* but plays normally postflop will not
+trigger the escalation. So the −2,493 cost is **largely specific to this
+degenerate archetype** and likely does not transfer to the tournament.
 
-**NOT in scope:** the eq_override branch (exonerated, +EV), Mode A,
-caller-passivity (unmeasurable as leaks).
+Note on fix mechanism: `min_raiser` does **not** fold to a 3-bet — its code
+re-min-raises any raise and only checks/calls/folds once it is already
+near-all-in (`chips_to_raise >= stack`). So a "3-bet it off the pot" fix
+will not work as stated; 3-betting wider just escalates the pot. Any fix
+path's efficacy must be **measured**, not assumed.
 
-**Locked success criteria — write once, do not move:**
+## Stage-2 options (ship/no-ship — user + advisor gate)
+
+Expected gain is similar for both fix paths; **risk diverges**:
+
+| path | expected gain | risk |
+|------|---------------|------|
+| **Ship 7.6 now** | 0 vs 7.6 | none |
+| Preflop change vs min-raisers (3-bet/aggression boost, gated on `opp_profile.rfi`) | +1,500–2,500 vs `min_raiser`; ≈0 elsewhere if gated | low — narrow, easy regression check; **efficacy unverified** (see note above) |
+| Cumulative-commitment guard (postflop structural) | +1,500–2,500 vs `min_raiser`; unknown vs others | medium — touches the postflop call hot path where the 7.6 +183 heldout gain lives |
+
+**Recommendation:** if pursuing 7.7, try the **narrow preflop path first**
+(smallest blast radius); escalate to the structural guard only if it cannot
+move the metric; ship 7.6 if neither clears the criteria below.
+
+## Locked success criteria — write once, do not move
+
 1. HU vs `min_raiser`: improvement ≥ +1,400 (≈ 3 SE; −2,493 → ≥ −1,100).
-2. HU regression guard: **none** of the other 22 matchups drops > 1 SE;
-   **none** flips positive→negative; the 22-matchup aggregate does not
-   drop > 1 SE.
-3. 6-max: paired-diff vs 7.6 ≥ 0 (no 6-max regression — that is where the
-   7.6 heldout gain lives).
+2. HU regression guard (multiple-comparisons-safe): **no** matchup drops
+   > 2 SE; **none** flips positive→negative; the 22-matchup aggregate does
+   not drop > 1 SE. (A 1-SE per-matchup rule would false-positive ~3–4 of
+   22 by noise alone — do not use it.)
+3. 6-max: paired-diff vs 7.6 ≥ 0 (no 6-max regression — the 7.6 heldout
+   gain lives there).
 4. Validator clean; cross-process determinism (`Diff = 0.0` HU vs
    deterministic opponents); bust-suite no regression.
 5. **If any criterion fails → ship 7.6.** 7.6 is already +EV vs 22/23 HU
    and the whole 6-max pool; 7.7 is upside only.
-
-**Open risk:** the fix touches the postflop call path — the plan's largest,
-riskiest piece, flagged for possible 7.8 deferral. It also targets a single
-pure-archetype opponent; a real-tournament min-raiser is rare. The
-cost/benefit (≈ +2,500 chips vs one HU opponent, vs structural-regression
-risk across 22) is a genuine ship/no-ship judgement — advisor + user gate
-before any code change.
 
 ## Artifacts
 
