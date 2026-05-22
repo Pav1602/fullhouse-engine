@@ -1200,7 +1200,29 @@ def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     if _aggressor_last_action_is_allin(state, agg_seat):
         strength = "strong"
 
-    return _narrow_range(base_range, strength, board=board)
+    narrowed = _narrow_range(base_range, strength, board=board)
+    # PROBE SHADOW (Stage 2a design): compute the raise-freq-scaled proposed
+    # range. Read-only — `narrowed` (current behaviour) is still returned.
+    try:
+        agg_bid = next((p.get("bot_id") for p in state.get("players", [])
+                        if p.get("seat") == agg_seat), None)
+        prof = OPPONENTS.get(agg_bid) if agg_bid else None
+        if prof is not None:
+            br, ca = prof.postflop_bets_raises, prof.postflop_calls
+        else:
+            br, ca = 0, 0
+        # Bayesian postflop raise-freq: prior 0.35, weight 20 (alpha 7, beta 13)
+        raise_freq = (br + 7.0) / (br + ca + 20.0)
+        w = 1.0 - raise_freq  # fraction of the narrowing to apply
+        keys = set(narrowed) | set(base_range)
+        proposed = {h: narrowed.get(h, 0.0) * w + base_range.get(h, 0.0) * (1.0 - w)
+                    for h in keys}
+        _PROBE_TRACE["agg_raise_freq"] = round(raise_freq, 3)
+        _PROBE_TRACE["_proposed_range"] = proposed
+        _PROBE_TRACE["_base_range"] = dict(base_range)
+    except Exception:
+        pass
+    return narrowed
 
 # ============================================================================
 # 9. PREFLOP DECISION
@@ -1637,6 +1659,20 @@ def decide_postflop(state: dict, position: str, cfg: Config,
     _PROBE_TRACE["eq"] = round(float(eq), 4)
     _PROBE_TRACE["was_pf_aggressor"] = bool(was_pf_aggressor)
 
+    # PROBE SHADOW: eq vs the proposed (raise-freq-scaled) range and vs the
+    # un-narrowed base range. Uses fresh deterministic RNGs (get_hand_rng),
+    # so the main `rng` and the bot's real decision are untouched.
+    if _PROBE_DIR and _PROBE_TRACE.get("_proposed_range") is not None:
+        try:
+            eq_prop = equity_vs_range(hole, board, _PROBE_TRACE["_proposed_range"],
+                                      n_sims=n_sims, rng=get_hand_rng(state))
+            eq_base = equity_vs_range(hole, board, _PROBE_TRACE["_base_range"],
+                                      n_sims=n_sims, rng=get_hand_rng(state))
+            _PROBE_TRACE["eq_proposed"] = round(float(eq_prop), 4)
+            _PROBE_TRACE["eq_base"] = round(float(eq_base), 4)
+        except Exception:
+            pass
+
     texture = board_texture(board)
     in_position = position in ("CO", "BTN")
 
@@ -1874,7 +1910,8 @@ def _probe_record(game_state, position, hand, street, action):
                 if e.get("seat") == me)
             rec["bet_this_street"] = game_state.get("your_bet_this_street", 0)
             for k in ("pot_odds", "risk_pct", "variance_term", "required_eq",
-                      "effective_owed", "spr", "commitment_factor"):
+                      "effective_owed", "spr", "commitment_factor",
+                      "agg_raise_freq", "eq_proposed", "eq_base"):
                 rec[k] = _PROBE_TRACE.get(k)
         _probe_emit(rec)
     except Exception:
