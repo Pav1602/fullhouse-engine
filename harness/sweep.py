@@ -24,7 +24,18 @@ Usage:
 import sys
 import json
 import importlib
+import multiprocessing
 from pathlib import Path
+
+# Force spawn start method to avoid fork+SQLite-mutex deadlock when
+# Optuna's joblib backend runs n_jobs>1 with the harness's compare()
+# (which itself spawns multiprocessing pool + sandbox subprocesses).
+# Without this, n_jobs>1 deadlocks at 100% CPU idle on cloud instances.
+# Must be called before any other multiprocessing-using code.
+try:
+    multiprocessing.set_start_method('spawn', force=True)
+except RuntimeError:
+    pass  # already set
 
 _REPO_ROOT = str(Path(__file__).parent.parent)
 if _REPO_ROOT not in sys.path:
@@ -386,10 +397,13 @@ def run_sweep(
     print(f"Trials: {n_trials}  |  Seeds/trial: {n_seeds}  |  Workers: {n_workers}  |  n_jobs (parallel trials): {n_jobs}")
     print(f"Storage: {storage}\n")
 
+    # show_progress_bar=False to avoid tqdm hijacking subprocess pipes on
+    # high-fan-out cloud configs (caused total deadlock during 7.9 sweep
+    # attempt on c7i.48xlarge). Progress visible via DB queries instead.
     study.optimize(
         objective,
         n_trials=n_trials,
-        show_progress_bar=True,
+        show_progress_bar=False,
         n_jobs=n_jobs,
     )
 
