@@ -228,8 +228,33 @@ PARAM_SPACE_V80 = {
     "committed_pot_ratio":  ("float", 0.4, 1.0),    # NEW: pot/INITIAL_STACK gate for Phase 2a override
     "phase2a_baseline":     ("float", 0.10, 0.25),  # NEW: rwf floor below which no un-narrowing
     "phase2a_denominator":  ("float", 0.50, 1.20),  # NEW: rate at which un-narrowing scales with rwf excess
+
+    # --- I. NEW in V80b — load-bearing params untouched in V79/V80 (15) ---
+    # SPR commitment regime — directly governs hero-call thinness when "committed"
+    # (k_commit applied to equity_call_threshold). Hero-call leak ($346K) traces
+    # to this regime firing too aggressively or too late.
+    "spr_commit_threshold": ("float", 1.5, 4.0),    # default 2.54
+    "spr_smoothness":       ("float", 1.0, 4.0),    # default 2.44
+    "k_commit":             ("float", 0.0, 0.02),   # default 0.005 — LOWER bound at 0 (effectively disable commitment); upper tighter than prior
+    # Preflop commitment gate — bust_021 territory (6-max residual after HU fix).
+    "fourbet_commit_threshold": ("float", 0.15, 0.45),  # default 0.25
+    # 4-bet bluff frequency — Mode A. Default 0.30 may be too high.
+    "fourbet_bluff_freq":   ("float", 0.05, 0.30),   # default 0.30
+    # River value-to-bluff ratios — Mode A residual ($375K).
+    "river_v2b_half_pot":   ("float", 1.0, 3.0),     # default 2.0
+    "river_v2b_pot_sized":  ("float", 0.5, 2.0),     # default 1.0
+    "river_v2b_overbet":    ("float", 0.2, 1.5),     # default 0.5
+    "k_river_bluff_blocker": ("float", 0.0, 0.40),   # default 0.17
+    # Maniac/station classification — gates a lot of downstream adjustment math.
+    "maniac_vpip_threshold":  ("float", 0.35, 0.55),  # default 0.439
+    "maniac_pfr_threshold":   ("float", 0.35, 0.60),  # default 0.476
+    "station_vpip_threshold": ("float", 0.30, 0.50),  # default 0.384
+    "station_pfr_threshold":  ("float", 0.10, 0.30),  # default 0.197
+    # stack_risk_*_maniac counterparts — asymmetric tuning vs V79 normal versions.
+    "stack_risk_high_eq_maniac": ("float", 0.55, 0.85),  # default 0.683
+    "stack_risk_med_eq_maniac":  ("float", 0.55, 0.85),  # default 0.736
 }
-assert len(PARAM_SPACE_V80) == 45, f"PARAM_SPACE_V80 has {len(PARAM_SPACE_V80)} params, expected 45"
+assert len(PARAM_SPACE_V80) == 60, f"PARAM_SPACE_V80 has {len(PARAM_SPACE_V80)} params, expected 60"
 
 # Polished-HU opponent subset for the 4th Pareto objective.
 # Selected per advisor: opponents where 7.8 regressed vs 7.7 in HU mode.
