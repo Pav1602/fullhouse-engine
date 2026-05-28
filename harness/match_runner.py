@@ -27,68 +27,190 @@ import os
 import sys
 import random
 import math
+import json
+import asyncio
+import time
 from pathlib import Path
-from multiprocessing import Pool
 
 _REPO_ROOT = str(Path(__file__).parent.parent)
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
+from engine.game import PokerEngine, STARTING_STACK
 
 # ---------------------------------------------------------------------------
-# Top-level worker — must be at module level so it is picklable.
+# Async Worker
 # ---------------------------------------------------------------------------
 
-def _run_one_match(args: tuple) -> dict:
-    """
-    args: (match_id, bot_paths, seed, n_hands, env_overrides)
+class AsyncBotProcess:
+    def __init__(self, bot_id: str, bot_path: str, env_overrides: dict):
+        self.bot_id = bot_id
+        self.bot_path = bot_path
+        self.env_overrides = env_overrides or {}
+        self.errors = []
+        self._proc = None
 
-    Sets SKANT_* env vars, runs a single match, restores env.
-    Returns the run_match result dict (chip_delta, n_hands, bot_errors, ...).
-    On any exception, returns a zero-delta result so the pool keeps running.
-    """
-    # Re-establish repo root in worker (needed for forkserver/spawn start methods)
-    _root = str(Path(__file__).parent.parent)
-    if _root not in sys.path:
-        sys.path.insert(0, _root)
+    async def start(self):
+        env = {**os.environ, "BOT_PATH": self.bot_path, "ACTION_TIMEOUT": "2"}
+        for k, v in self.env_overrides.items():
+            env[k] = str(v)
 
-    from sandbox.match import run_match
+        runner_path = Path(__file__).parent.parent / "sandbox" / "runner.py"
+        cmd = [sys.executable, "-u", str(runner_path)]
 
-    match_id, bot_paths, seed, n_hands, env_overrides = args
+        self._proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env
+        )
+        return self
+
+    async def act(self, game_state: dict) -> dict:
+        try:
+            msg = json.dumps(game_state) + "\n"
+            self._proc.stdin.write(msg.encode("utf-8"))
+            await self._proc.stdin.drain()
+
+            line = await self._proc.stdout.readline()
+            if not line:
+                raise EOFError("Bot process died")
+            
+            action = json.loads(line.decode("utf-8").strip())
+            if "error" in action:
+                self.errors.append(action["error"])
+            return action
+        except Exception as e:
+            self.errors.append(str(e))
+            return {"action": "fold", "error": str(e)}
+
+    async def stop(self):
+        if not self._proc:
+            return
+        try:
+            self._proc.stdin.close()
+        except Exception:
+            pass
+        try:
+            await asyncio.wait_for(self._proc.wait(), timeout=1.0)
+        except asyncio.TimeoutError:
+            try:
+                self._proc.kill()
+                await self._proc.wait()
+            except ProcessLookupError:
+                pass
+
+
+async def async_run_match(match_id: str, bot_paths: dict, n_hands: int, seed: int, env_overrides: dict) -> dict:
+    bot_ids = list(bot_paths.keys())
+    
     env_overrides = dict(env_overrides) if env_overrides else {}
     env_overrides["SKANT_MATCH_ID"] = match_id
 
-    # Inject env overrides and remember originals for cleanup
-    saved = {}
-    for k, v in env_overrides.items():
-        saved[k] = os.environ.get(k)
-        os.environ[k] = str(v)
+    procs = {}
+    for bid, path in bot_paths.items():
+        proc = AsyncBotProcess(bid, path, env_overrides)
+        await proc.start()
+        procs[bid] = proc
+
+    stacks = {bid: STARTING_STACK for bid in bot_ids}
+    hand_log = []
+    dealer = 0
+    start_ts = time.time()
 
     try:
-        result = run_match(match_id, bot_paths, n_hands=n_hands, seed=seed)
-    except Exception as exc:
-        # Return zero-delta on crash so the sweep isn't derailed by a bad trial
-        result = {
-            "match_id": match_id,
-            "chip_delta": {k: 0 for k in bot_paths},
-            "bot_errors": {k: [str(exc)] for k in bot_paths},
-            "n_hands": 0,
-        }
+        for hand_num in range(n_hands):
+            alive = [bid for bid in bot_ids if stacks[bid] > 0]
+            if len(alive) < 2:
+                break
+
+            hand_id = f"{match_id}_h{hand_num:04d}"
+            hand_seed = (seed * 1000003 + hand_num) if seed is not None else None
+            
+            engine = PokerEngine(
+                hand_id=hand_id,
+                bot_ids=alive,
+                dealer_seat=dealer % len(alive),
+                starting_stacks={bid: stacks[bid] for bid in alive},
+                seed=hand_seed,
+            )
+
+            state = engine.start_hand()
+            steps = 0
+
+            while state.get("type") == "action_request":
+                seat = state["seat_to_act"]
+                bot_id = alive[seat]
+                action = await procs[bot_id].act(state)
+
+                state = engine.apply_action(seat, action)
+                steps += 1
+                if steps > 1000:
+                    raise RuntimeError(f"Hand exceeded 1000 steps: {engine.hand_id}")
+
+            if state.get("type") == "hand_complete":
+                state["all_hole_cards"] = {p.bot_id: [str(c) for c in p.hole_cards] for p in engine.players}
+                for bot_id in alive:
+                    try:
+                        await procs[bot_id].act(state)
+                    except Exception:
+                        pass
+
+            hand_log.append({"hand_num": hand_num, "hand_id": hand_id, **state})
+
+            for bid, s in state["final_stacks"].items():
+                stacks[bid] = s
+
+            dealer += 1
     finally:
-        for k, orig in saved.items():
-            if orig is None:
-                os.environ.pop(k, None)
-            else:
-                os.environ[k] = orig
+        for p in procs.values():
+            await p.stop()
 
-    return result
+    return {
+        "match_id": match_id,
+        "bot_ids": bot_ids,
+        "n_hands": len(hand_log),
+        "duration_s": round(time.time() - start_ts, 2),
+        "final_stacks": stacks,
+        "chip_delta": {bid: stacks[bid] - STARTING_STACK for bid in bot_ids},
+        "bot_errors": {bid: procs[bid].errors for bid in bot_ids},
+        "hands": hand_log,
+    }
 
+async def _run_one_match_task(sem, args):
+    match_id, bot_paths, seed, n_hands, env_overrides = args
+    async with sem:
+        try:
+            return await async_run_match(match_id, bot_paths, n_hands, seed, env_overrides)
+        except Exception as exc:
+            return {
+                "match_id": match_id,
+                "chip_delta": {k: 0 for k in bot_paths},
+                "bot_errors": {k: [str(exc)] for k in bot_paths},
+                "n_hands": 0,
+            }
+
+async def _run_all_tasks(tasks, max_concurrent_matches, show_progress):
+    sem = asyncio.Semaphore(max_concurrent_matches)
+    if show_progress:
+        import tqdm
+        pbar = tqdm.tqdm(total=len(tasks), desc="Matches")
+        async def tracking_worker(t):
+            res = await _run_one_match_task(sem, t)
+            pbar.update(1)
+            return res
+        coros = [tracking_worker(t) for t in tasks]
+        results = await asyncio.gather(*coros)
+        pbar.close()
+        return results
+    else:
+        coros = [_run_one_match_task(sem, t) for t in tasks]
+        return await asyncio.gather(*coros)
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-
-
 
 def aggregate_by_opponent(per_table_results: dict) -> dict:
     opp_totals = {}
@@ -107,7 +229,6 @@ def aggregate_by_opponent(per_table_results: dict) -> dict:
             opp_totals[opp]["n_total"] += data["n"]
             
     import numpy as np
-    import math
     def _stderr(arr):
         n = len(arr)
         return float(np.std(arr, ddof=1) / math.sqrt(n)) if n > 1 else 0.0
@@ -126,7 +247,6 @@ def aggregate_by_opponent(per_table_results: dict) -> dict:
         }
     return aggregated
 
-
 def compare(
     bot_a_path: str,
     bot_b_path: str,
@@ -139,18 +259,22 @@ def compare(
     show_progress: bool = False,
     mode: str = "6max",
     n_tables: int = 10,
+    max_concurrent_matches: int = None,
 ) -> dict:
+    if max_concurrent_matches is None:
+        max_concurrent_matches = min(n_workers * 4, 192)
+
     if mode.lower() == "hu":
         return _compare_hu(
             bot_a_path=bot_a_path,
             bot_b_path=bot_b_path,
             opponent_pool=opponent_pool,
             n_seeds=n_seeds,
-            n_workers=n_workers,
             n_hands=n_hands,
             env_overrides=env_overrides,
             seed_offset=seed_offset,
-            show_progress=show_progress
+            show_progress=show_progress,
+            max_concurrent_matches=max_concurrent_matches
         )
     elif mode.lower() == "6max":
         return _compare_6max(
@@ -158,28 +282,27 @@ def compare(
             bot_b_path=bot_b_path,
             opponent_pool=opponent_pool,
             n_seeds=n_seeds,
-            n_workers=n_workers,
             n_hands=n_hands,
             env_overrides=env_overrides,
             seed_offset=seed_offset,
             show_progress=show_progress,
-            n_tables=n_tables
+            n_tables=n_tables,
+            max_concurrent_matches=max_concurrent_matches
         )
     else:
         raise ValueError(f"Unknown mode {mode}")
-
 
 def _compare_6max(
     bot_a_path: str,
     bot_b_path: str,
     opponent_pool: dict,
     n_seeds: int,
-    n_workers: int,
     n_hands: int,
     env_overrides: dict,
     seed_offset: int,
     show_progress: bool,
     n_tables: int,
+    max_concurrent_matches: int,
 ) -> dict:
     import numpy as np
 
@@ -190,15 +313,12 @@ def _compare_6max(
     
     tasks = []
     task_meta = []
-    
     pool_keys = list(opponent_pool.keys())
-    
-    table_configs = {} # table_id -> list of opponents
+    table_configs = {}
     
     for i in range(n_seeds):
         actual_seed = seed_offset + i
         for t_idx in range(n_tables):
-            # Deterministic opponent sampling
             rng = random.Random(f"{actual_seed}_{t_idx}")
             sampled_opp_ids = rng.sample(pool_keys, 5)
             table_id = "table_" + "_".join(sorted(sampled_opp_ids))
@@ -233,7 +353,7 @@ def _compare_6max(
             
             tasks.append((mid_swap, bot_a_swap_dict, actual_seed, n_hands, env_overrides))
             task_meta.append((table_id, "a_swapped", i, arr2_seat))
-            
+
             if not same_bot:
                 bot_b_norm_dict = make_bot_dict(arr1_seat, bot_b_path)
                 bot_b_swap_dict = make_bot_dict(arr2_seat, bot_b_path)
@@ -244,177 +364,108 @@ def _compare_6max(
                 tasks.append((mid_swap, bot_b_swap_dict, actual_seed, n_hands, env_overrides))
                 task_meta.append((table_id, "b_swapped", i, arr2_seat))
 
-    with Pool(processes=n_workers) as pool:
-        if show_progress:
-            import tqdm
-            results = list(tqdm.tqdm(pool.imap(_run_one_match, tasks), total=len(tasks), desc="Matches"))
-        else:
-            results = pool.map(_run_one_match, tasks)
+    results = asyncio.run(_run_all_tasks(tasks, max_concurrent_matches, show_progress))
 
-    # Aggregate: table_id -> seed_i -> config_key -> chip_delta
     raw = {}
-    for (table_id, config_key, local_i, seat_idx), result in zip(task_meta, results):
+    for (table_id, config_key, local_i, test_seat), result in zip(task_meta, results):
         cd = result.get("chip_delta", {})
-        # the key in chip_delta is f"test_bot_{seat_idx}"
-        test_bot_delta = cd.get(f"test_bot_{seat_idx}", 0)
-        raw.setdefault(table_id, {}).setdefault(local_i, {})[config_key] = test_bot_delta
+        test_bot_key = f"test_bot_{test_seat}"
+        val = cd.get(test_bot_key, 0)
+        raw.setdefault(table_id, {}).setdefault(local_i, {})[config_key] = val
 
     def _stderr(arr):
         n = len(arr)
         return float(np.std(arr, ddof=1) / math.sqrt(n)) if n > 1 else 0.0
 
     output = {}
-    for table_id, seed_data in raw.items():
+    for table_id, opps in table_configs.items():
+        seed_data = raw.get(table_id, {})
         a_deltas = []
         b_deltas = []
         paired_diffs = []
-        
-        # Count number of distinct seeds tested for this table_id
-        for i in seed_data.keys():
-            sd = seed_data[i]
-            if "a_normal" not in sd or "a_swapped" not in sd:
-                continue
-                
-            a_norm = sd["a_normal"]
-            a_swap = sd["a_swapped"]
+        for i in range(n_seeds):
+            sd = seed_data.get(i, {})
+            a_norm = sd.get("a_normal", 0)
+            a_swap = sd.get("a_swapped", 0)
             a_avg = (a_norm + a_swap) / 2.0
             a_deltas.append(a_avg)
             
             if not same_bot:
-                b_norm = sd["b_normal"]
-                b_swap = sd["b_swapped"]
+                b_norm = sd.get("b_normal", 0)
+                b_swap = sd.get("b_swapped", 0)
                 b_avg = (b_norm + b_swap) / 2.0
                 b_deltas.append(b_avg)
                 paired_diffs.append(a_avg - b_avg)
 
         a_arr = np.array(a_deltas)
-        n_obs = len(a_deltas)
-        
         if same_bot:
             output[table_id] = {
-                "opponents":          table_configs[table_id],
-                "a_mean":             float(np.mean(a_arr)) if n_obs > 0 else 0.0,
-                "a_stderr":           _stderr(a_arr),
-                "b_mean":             float(np.mean(a_arr)) if n_obs > 0 else 0.0,
-                "b_stderr":           _stderr(a_arr),
-                "paired_diff_mean":   0.0,
+                "opponents": opps,
+                "a_mean": float(np.mean(a_arr)),
+                "a_stderr": _stderr(a_arr),
+                "b_mean": float(np.mean(a_arr)),
+                "b_stderr": _stderr(a_arr),
+                "paired_diff_mean": 0.0,
                 "paired_diff_stderr": 0.0,
-                "n":                  n_obs,
+                "n": n_seeds,
             }
         else:
             b_arr = np.array(b_deltas)
             d_arr = np.array(paired_diffs)
             output[table_id] = {
-                "opponents":          table_configs[table_id],
-                "a_mean":             float(np.mean(a_arr)) if n_obs > 0 else 0.0,
-                "a_stderr":           _stderr(a_arr),
-                "b_mean":             float(np.mean(b_arr)) if n_obs > 0 else 0.0,
-                "b_stderr":           _stderr(b_arr),
-                "paired_diff_mean":   float(np.mean(d_arr)) if n_obs > 0 else 0.0,
+                "opponents": opps,
+                "a_mean": float(np.mean(a_arr)),
+                "a_stderr": _stderr(a_arr),
+                "b_mean": float(np.mean(b_arr)),
+                "b_stderr": _stderr(b_arr),
+                "paired_diff_mean": float(np.mean(d_arr)),
                 "paired_diff_stderr": _stderr(d_arr),
-                "n":                  n_obs,
+                "n": n_seeds,
             }
-
     return output
 
 def _compare_hu(
     bot_a_path: str,
     bot_b_path: str,
-    opponent_pool: dict,        # {opp_id: opp_path}
-    n_seeds: int = 100,
-    n_workers: int = 8,
-    n_hands: int = 200,
-    env_overrides: dict = None, # {"SKANT_RFI_TIGHTNESS": "1.2", ...}
-    seed_offset: int = 0,       # first actual seed = seed_offset + 0
-    show_progress: bool = False,
+    opponent_pool: dict,
+    n_seeds: int,
+    n_hands: int,
+    env_overrides: dict,
+    seed_offset: int,
+    show_progress: bool,
+    max_concurrent_matches: int,
 ) -> dict:
-    """
-    Compare bot_a vs bot_b against every opponent in opponent_pool using CRN.
-
-    For each (opponent, seed_k), runs 4 matches so both bots see the same
-    shuffled deck in the same seat configuration. Averages normal + swapped
-    to cancel positional bias, then computes the paired difference per seed.
-
-    When bot_a_path == bot_b_path (fast path): only 2 matches per seed are run.
-    b_* fields mirror a_* and paired_diff is 0.0 exactly — halves total compute
-    for baseline and sweep self-comparisons.
-
-    seed_offset: actual seeds used are seed_offset, seed_offset+1, …,
-    seed_offset+n_seeds-1. Pass seed_offset=batch_size in sweep Phase 2 to
-    avoid re-running seeds already evaluated in Phase 1.
-
-    Returns:
-        {
-            opp_id: {
-                "a_mean":             float,   # bot_a mean chip delta (pos-balanced)
-                "a_stderr":           float,
-                "b_mean":             float,   # bot_b mean chip delta
-                "b_stderr":           float,
-                "paired_diff_mean":   float,   # mean(a_avg - b_avg) per seed
-                "paired_diff_stderr": float,
-                "n":                  int,     # = n_seeds paired observations
-            },
-            ...
-        }
-
-    Acceptance test:
-        compare(path_A, path_A, pool, n_seeds=5) ->
-        paired_diff_mean == 0.0 for every opponent when both bots are
-        completely deterministic. For bots with unseeded random decisions
-        (like mixed-strategy MC equity), expect |paired_diff_mean| << a_mean
-        and paired_diff_stderr < 50 chips (at n_seeds=100).
-    """
     import numpy as np
 
     if env_overrides is None:
         env_overrides = {}
 
     same_bot = (bot_a_path == bot_b_path)
-
-    # Build flat task list: (match_id, bot_paths, seed, n_hands, env_overrides)
-    # task_meta parallel list: (opp_id, config_key, local_i) where local_i is
-    #   0-indexed within this compare() call (independent of seed_offset).
     tasks = []
     task_meta = []
 
     for opp_id, opp_path in opponent_pool.items():
         for i in range(n_seeds):
             actual_seed = seed_offset + i
-            # CRITICAL: "a" and "b" runs share the SAME match_id so that bots
-            # which seed their RNG from hand_id (e.g. skantbot3's get_hand_rng)
-            # produce identical decisions in both runs → paired_diff cancels exactly.
             mid_norm = f"cmp_{opp_id}_{actual_seed}_norm"
             mid_swap = f"cmp_{opp_id}_{actual_seed}_swap"
 
-            # bot_a normal: bot_a in seat 0
-            tasks.append((mid_norm, {"bot_a": bot_a_path, opp_id: opp_path},
-                          actual_seed, n_hands, env_overrides))
+            tasks.append((mid_norm, {"bot_a": bot_a_path, opp_id: opp_path}, actual_seed, n_hands, env_overrides))
             task_meta.append((opp_id, "a_normal", i))
-            # bot_a swapped: bot_a in seat 1
-            tasks.append((mid_swap, {opp_id: opp_path, "bot_a": bot_a_path},
-                          actual_seed, n_hands, env_overrides))
+            
+            tasks.append((mid_swap, {opp_id: opp_path, "bot_a": bot_a_path}, actual_seed, n_hands, env_overrides))
             task_meta.append((opp_id, "a_swapped", i))
 
             if not same_bot:
-                # bot_b normal: bot_b in seat 0 — SAME match_id as a_normal
-                tasks.append((mid_norm, {"bot_b": bot_b_path, opp_id: opp_path},
-                              actual_seed, n_hands, env_overrides))
+                tasks.append((mid_norm, {"bot_b": bot_b_path, opp_id: opp_path}, actual_seed, n_hands, env_overrides))
                 task_meta.append((opp_id, "b_normal", i))
-                # bot_b swapped: bot_b in seat 1 — SAME match_id as a_swapped
-                tasks.append((mid_swap, {opp_id: opp_path, "bot_b": bot_b_path},
-                              actual_seed, n_hands, env_overrides))
+                
+                tasks.append((mid_swap, {opp_id: opp_path, "bot_b": bot_b_path}, actual_seed, n_hands, env_overrides))
                 task_meta.append((opp_id, "b_swapped", i))
 
-    # Run all tasks in parallel
-    with Pool(processes=n_workers) as pool:
-        if show_progress:
-            import tqdm
-            results = list(tqdm.tqdm(pool.imap(_run_one_match, tasks), total=len(tasks), desc="Matches"))
-        else:
-            results = pool.map(_run_one_match, tasks)
+    results = asyncio.run(_run_all_tasks(tasks, max_concurrent_matches, show_progress))
 
-    # Aggregate per-seed deltas: opp_id -> local_i -> config_key -> chip_delta
-    raw: dict = {}
+    raw = {}
     for (opp_id, config_key, local_i), result in zip(task_meta, results):
         cd = result.get("chip_delta", {})
         raw.setdefault(opp_id, {}).setdefault(local_i, {})[config_key] = cd
@@ -446,7 +497,6 @@ def _compare_hu(
         a_arr = np.array(a_deltas)
 
         if same_bot:
-            # Fast path: b identical to a, paired diff trivially zero
             output[opp_id] = {
                 "a_mean":             float(np.mean(a_arr)),
                 "a_stderr":           _stderr(a_arr),
