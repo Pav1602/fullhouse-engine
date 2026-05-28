@@ -144,6 +144,93 @@ PARAM_SPACE_V79 = {
 }
 assert len(PARAM_SPACE_V79) == 42, f"PARAM_SPACE_V79 has {len(PARAM_SPACE_V79)} params, expected 42"
 
+# ---------------------------------------------------------------------------
+# v80 PARAM_SPACE — 45 params, post-7.12 re-tune with directional priors
+# ---------------------------------------------------------------------------
+# Built 2026-05-28 on top of skantbot7.12. Strategy: keep V79 architecture,
+# tighten bounds where the 7.11 bust survey gave directional evidence, and
+# add the 3 new Phase 2a knobs introduced in 7.11/7.12.
+#
+# Directional priors applied (vs V79):
+#   - Preflop defense: tighter (closes the bust_195 family)
+#       threebet_call_threshold_pct  0.10-0.30 → 0.10-0.22
+#       fourbet_call_threshold_pct   0.10-0.25 → 0.08-0.14
+#       small_open_call_boost        1.5-3.0   → 1.0-1.8
+#   - Postflop calling: tighter
+#       equity_call_threshold        0.35-0.55 → 0.39-0.55
+#       pot_odds_buffer_normal       0.05-0.20 → 0.10-0.20
+#   - Mode A cbet/bluff: lower
+#       cbet_freq_base               0.40-0.80 → 0.40-0.60
+#       bluff_freq_ip                0.005-0.10 → 0.005-0.06
+#       bluff_freq_oop               0.01-0.15  → 0.01-0.05
+#   - New Phase 2a knobs (default-only validated in 7.12):
+#       committed_pot_ratio          (new) 0.4-1.0
+#       phase2a_baseline             (new) 0.10-0.25
+#       phase2a_denominator          (new) 0.50-1.20
+PARAM_SPACE_V80 = {
+    # --- A. Preflop tightness (8) — bounds tightened per priors ---
+    "rfi_tightness":                ("float", 1.0, 1.6),
+    "threebet_tightness":           ("float", 0.7, 1.3),
+    "fourbet_tightness":            ("float", 0.9, 1.5),
+    "threebet_call_threshold_pct":  ("float", 0.10, 0.22),   # TIGHTENED (was 0.10-0.30)
+    "fourbet_call_threshold_pct":   ("float", 0.08, 0.14),   # TIGHTENED (was 0.10-0.25)
+    "small_open_threshold_bb":      ("float", 1.5, 3.0),
+    "small_open_call_boost":        ("float", 1.0, 1.8),     # SHIFTED DOWN (was 1.5-3.0)
+    "small_open_3bet_boost":        ("float", 1.2, 2.5),
+
+    # --- B. Stack curve (2) ---
+    "shrink_widening_factor":  ("float", 0.0, 0.15),
+    "stack_short_tightness":   ("float", 0.6, 1.0),
+
+    # --- C. Postflop equity thresholds (6) — call thresh tightened ---
+    "equity_value_bet":         ("float", 0.55, 0.75),
+    "equity_thin_value":        ("float", 0.45, 0.62),
+    "equity_call_threshold":    ("float", 0.39, 0.55),       # LOWER BOUND RAISED (was 0.35)
+    "equity_raise_threshold":   ("float", 0.75, 0.90),
+    "pot_odds_buffer_normal":   ("float", 0.10, 0.20),       # LOWER BOUND RAISED (was 0.05)
+    "pot_odds_buffer_marginal": ("float", 0.10, 0.30),
+
+    # --- D. Stack-risk / variance (3) ---
+    "variance_c":                ("float", 0.005, 0.10),
+    "stack_risk_high_eq_normal": ("float", 0.65, 0.85),
+    "stack_risk_med_eq_normal":  ("float", 0.40, 0.60),
+
+    # --- E. C-bet / bluff (6) + texture-coef siblings (3) = 9 — Mode A down ---
+    "cbet_freq_base":         ("float", 0.40, 0.70),         # widened to include 7.13 default 0.636 (was 0.40-0.80 in V79)
+    "cbet_size_pct":          ("float", 0.40, 0.70),
+    "cbet_multiway_penalty":  ("float", 0.40, 0.80),
+    "bluff_freq_ip":          ("float", 0.005, 0.06),        # UPPER LOWERED (was 0.10)
+    "bluff_freq_oop":         ("float", 0.01, 0.05),         # UPPER LOWERED (was 0.15)
+    "k_texture_paired":       ("float", 0.05, 0.40),
+    "k_texture_monotone":     ("float", 0.05, 0.30),
+    "k_texture_connected":    ("float", -0.30, 0.10),
+    "k_texture_high_card":    ("float", -0.20, 0.10),
+
+    # --- F. Opponent-exploit knobs (5) + barrel/wtsd siblings (3) = 8 ---
+    "k_bluff_vs_cbet_folder":         ("float", 0.0, 0.7),
+    "k_bluff_vs_2barrel_folder":      ("float", 0.0, 0.5),
+    "k_bluff_vs_3barrel_folder":      ("float", 0.0, 0.5),
+    "k_bluff_vs_wtsd":                ("float", 0.0, 0.30),
+    "k_value_size_vs_station":        ("float", 0.0, 0.40),
+    "k_tightness_vs_3bet_freq":       ("float", 0.0, 0.30),
+    "k_4bet_vs_3bet_freq":            ("float", 0.0, 0.50),
+    "k_call_threshold_vs_aggression": ("float", 0.0, 0.50),
+
+    # --- G. River + match-state (4) + standing_alpha/beta siblings (2) = 6 ---
+    "river_mdf_aggression":         ("float", 0.80, 1.20),
+    "river_value_thin_threshold":   ("float", 0.50, 0.65),
+    "river_value_strong_threshold": ("float", 0.72, 0.85),
+    "k_standing":                   ("float", 0.10, 0.50),
+    "standing_alpha":               ("float", 0.02, 0.20),
+    "standing_beta":                ("float", 0.05, 0.40),
+
+    # --- H. NEW in 7.11/7.12 — Phase 2a un-narrowing knobs (3) ---
+    "committed_pot_ratio":  ("float", 0.4, 1.0),    # NEW: pot/INITIAL_STACK gate for Phase 2a override
+    "phase2a_baseline":     ("float", 0.10, 0.25),  # NEW: rwf floor below which no un-narrowing
+    "phase2a_denominator":  ("float", 0.50, 1.20),  # NEW: rate at which un-narrowing scales with rwf excess
+}
+assert len(PARAM_SPACE_V80) == 45, f"PARAM_SPACE_V80 has {len(PARAM_SPACE_V80)} params, expected 45"
+
 # Polished-HU opponent subset for the 4th Pareto objective.
 # Selected per advisor: opponents where 7.8 regressed vs 7.7 in HU mode.
 HU_POLISHED_OPPONENTS = ["gemini-1", "claude-4", "gemini-6"]
@@ -357,7 +444,9 @@ def run_sweep(
     validate_pool(validation_pool)
 
     # Select PARAM_SPACE variant
-    if param_set == "v79":
+    if param_set == "v80":
+        active_param_space = PARAM_SPACE_V80
+    elif param_set == "v79":
         active_param_space = PARAM_SPACE_V79
     else:
         active_param_space = PARAM_SPACE
@@ -414,6 +503,35 @@ def run_sweep(
     print(f"Tuning {len(active_param_space)} parameters over {len(train_pool)} train and {len(validation_pool)} unseen opponents")
     print(f"Trials: {n_trials}  |  Seeds/trial: {n_seeds}  |  Workers: {n_workers}  |  n_jobs (parallel trials): {n_jobs}")
     print(f"Storage: {storage}\n")
+
+    # Enqueue current submission-bot defaults as trial 0 so TPE/NSGA-II has
+    # a known-good baseline anchor. Without this, 5000 random-then-modeled
+    # trials could all converge worse than the starting point. Only seeds
+    # params that exist in the active space and fall within its bounds.
+    if not resume:
+        try:
+            import importlib.util as _ilu
+            from harness.opponents.registry import SKANTBOT_TUNABLE_PATH as _STP
+            _spec = _ilu.spec_from_file_location("_skant_anchor", _STP)
+            _m = _ilu.module_from_spec(_spec); _spec.loader.exec_module(_m)
+            _cfg = _m.CONFIG
+            anchor = {}
+            skipped = []
+            for name, (dtype, lo, hi) in active_param_space.items():
+                if hasattr(_cfg, name):
+                    v = getattr(_cfg, name)
+                    if lo <= v <= hi:
+                        anchor[name] = v
+                    else:
+                        skipped.append((name, v, lo, hi))
+            if skipped:
+                print(f"Anchor skipped {len(skipped)} params (default outside V80 bounds):")
+                for name, v, lo, hi in skipped:
+                    print(f"  {name}={v}  bound=({lo}, {hi})")
+            print(f"Enqueueing baseline anchor: {len(anchor)}/{len(active_param_space)} params from {_STP}")
+            study.enqueue_trial(anchor)
+        except Exception as _e:
+            print(f"Warning: could not enqueue baseline anchor — {_e}")
 
     # show_progress_bar=False to avoid tqdm hijacking subprocess pipes on
     # high-fan-out cloud configs (caused total deadlock during 7.9 sweep
@@ -494,7 +612,7 @@ if __name__ == "__main__":
 
     p.add_argument("--resume",      action="store_true")
     # v79 additions
-    p.add_argument("--param-set", default="legacy", choices=["legacy", "v79"],
+    p.add_argument("--param-set", default="legacy", choices=["legacy", "v79", "v80"],
                    help="legacy = 10-param sweep; v79 = 42-param post-parser-fix sweep")
     p.add_argument("--hu-seeds", type=int, default=0,
                    help="If >0, adds a 4th HU-polished objective at this seed count")
