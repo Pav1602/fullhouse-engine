@@ -67,6 +67,24 @@ PARAM_SPACE = {
 # charts. Sibling-coherence groups (k_texture_*, k_bluff_vs_*_folder,
 # standing_alpha/beta) tuned jointly to avoid one-sided re-tuning.
 # See PLAN_7.8_parser_fix.md and project_parser_bug_range_hyphen memory.
+# === V80 directional priors (from 7.11 bust survey, 200 matches) ===
+# 1. Preflop defense should tighten (60%+ of bust $ traces to wide 3-bet
+#    defense). Sweep these UPWARD (tighter):
+#      threebet_call_threshold_pct  : current default ~0.22, try 0.10-0.20
+#      fourbet_call_threshold_pct   : current default ~0.135, try 0.08-0.13
+#      small_open_call_boost        : current default ~1.7, try 1.0-1.5
+# 2. Postflop calling should tighten on wet boards:
+#      equity_call_threshold        : sweep 0.42-0.55 (currently 0.39)
+#      pot_odds_buffer_normal       : sweep 0.10-0.18 (currently 0.10)
+# 3. Mode A cbet/bluff (known-since-7.4 issue):
+#      cbet_freq_base               : sweep DOWN 0.40-0.55 (currently 0.64)
+#      bluff_freq_ip                : sweep DOWN 0.02-0.05 (currently 0.05)
+#      bluff_freq_oop               : sweep DOWN 0.01-0.03 (currently 0.04)
+# 4. New 7.11 Phase 2a knobs (just added, default-only validated):
+#      committed_pot_ratio          : sweep 0.4-1.0
+#      phase2a_baseline             : sweep 0.10-0.25
+#      phase2a_denominator          : sweep 0.50-1.20
+
 PARAM_SPACE_V79 = {
     # --- A. Preflop tightness (8) — directly disrupted by parser fix ---
     "rfi_tightness":                ("float", 1.0, 1.6),
