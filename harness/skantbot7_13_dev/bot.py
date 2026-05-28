@@ -2230,6 +2230,33 @@ def decide_postflop(state: dict, position: str, cfg: Config,
 # 11. MAIN ENTRY POINT
 # ============================================================================
 
+def reset_match_state():
+    """Clear all module-level mutable state so the bot can be reused in-process
+    across matches without leakage. Used by the in-process sweep harness."""
+    global _EQUITY_CACHE, our_match_delta, OPPONENTS
+    _EQUITY_CACHE = {}
+    our_match_delta = 0
+    OPPONENTS.clear()
+
+
+def set_config_from_dict(params: dict):
+    """Update CONFIG fields from a dict (in-process equivalent of env vars).
+    Used by the in-process sweep harness to apply Optuna-suggested params
+    without respawning the bot subprocess."""
+    global CONFIG
+    for name, value in params.items():
+        if hasattr(CONFIG, name):
+            current = getattr(CONFIG, name)
+            if isinstance(current, bool):
+                setattr(CONFIG, name, bool(value))
+            elif isinstance(current, int) and not isinstance(current, bool):
+                setattr(CONFIG, name, int(value))
+            elif isinstance(current, float):
+                setattr(CONFIG, name, float(value))
+            else:
+                setattr(CONFIG, name, value)
+
+
 def decide(game_state: dict) -> dict:
     """Engine entry. Must return within 2 seconds."""
     global _EQUITY_CACHE, our_match_delta

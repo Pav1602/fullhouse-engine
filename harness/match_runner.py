@@ -191,22 +191,177 @@ async def _run_one_match_task(sem, args):
                 "n_hands": 0,
             }
 
-async def _run_all_tasks(tasks, max_concurrent_matches, show_progress):
-    sem = asyncio.Semaphore(max_concurrent_matches)
+# In-process bot module cache, keyed by bot file path. Each worker process
+# imports a bot module ONCE and reuses it across matches — saves the ~70ms
+# subprocess startup + import cost that dominated single-match wall time
+# (560ms fresh vs 314ms reused). Per worker, not per match.
+_BOT_MODULES = {}
+
+
+def _load_bot_module(path: str):
+    """Import a bot module from a file path. Cached per worker process."""
+    global _BOT_MODULES
+    if path in _BOT_MODULES:
+        return _BOT_MODULES[path]
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(f"bot_{abs(hash(path))}", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _BOT_MODULES[path] = mod
+    return mod
+
+
+def _run_one_match_inproc(args):
+    """In-process match: import bot modules once per worker, call decide()
+    directly. No subprocess, no pipe I/O. Eliminates the ~250ms per match
+    that the subprocess approach paid in spawn + IPC overhead."""
+    match_id, bot_paths, seed, n_hands, env_overrides = args
+    try:
+        # Load and configure all bot modules
+        bots = {}
+        for bid, path in bot_paths.items():
+            mod = _load_bot_module(path)
+            # Reset state if the bot supports it (skantbot dev variant)
+            if hasattr(mod, "reset_match_state"):
+                mod.reset_match_state()
+            # Apply env_overrides as Config params (skant only — others use defaults)
+            if env_overrides and hasattr(mod, "set_config_from_dict"):
+                params = {}
+                for k, v in env_overrides.items():
+                    if k.startswith("SKANT_"):
+                        params[k[len("SKANT_"):].lower()] = v
+                if params:
+                    mod.set_config_from_dict(params)
+            bots[bid] = mod
+        bot_ids = list(bot_paths.keys())
+        stacks = {bid: STARTING_STACK for bid in bot_ids}
+        hand_log = []
+        dealer = 0
+        start_ts = time.time()
+        for hand_num in range(n_hands):
+            alive = [bid for bid in bot_ids if stacks[bid] > 0]
+            if len(alive) < 2:
+                break
+            hand_id = f"{match_id}_h{hand_num:04d}"
+            hand_seed = (seed * 1000003 + hand_num) if seed is not None else None
+            engine = PokerEngine(
+                hand_id=hand_id,
+                bot_ids=alive,
+                dealer_seat=dealer % len(alive),
+                starting_stacks={bid: stacks[bid] for bid in alive},
+                seed=hand_seed,
+            )
+            state = engine.start_hand()
+            steps = 0
+            while state.get("type") == "action_request":
+                seat = state["seat_to_act"]
+                bot_id = alive[seat]
+                try:
+                    action = bots[bot_id].decide(state)
+                except Exception as e:
+                    action = {"action": "fold", "error": str(e)}
+                state = engine.apply_action(seat, action)
+                steps += 1
+                if steps > 1000:
+                    raise RuntimeError(f"Hand exceeded 1000 steps: {hand_id}")
+            if state.get("type") == "hand_complete":
+                state["all_hole_cards"] = {p.bot_id: [str(c) for c in p.hole_cards] for p in engine.players}
+                for bot_id in alive:
+                    try:
+                        bots[bot_id].decide(state)
+                    except Exception:
+                        pass
+            hand_log.append({"hand_num": hand_num, "hand_id": hand_id, **state})
+            for bid, s in state["final_stacks"].items():
+                stacks[bid] = s
+            dealer += 1
+        return {
+            "match_id": match_id,
+            "bot_ids": bot_ids,
+            "n_hands": len(hand_log),
+            "duration_s": round(time.time() - start_ts, 2),
+            "final_stacks": stacks,
+            "chip_delta": {bid: stacks[bid] - STARTING_STACK for bid in bot_ids},
+            "bot_errors": {bid: [] for bid in bot_ids},
+            "hands": hand_log,
+        }
+    except Exception as exc:
+        return {
+            "match_id": match_id,
+            "chip_delta": {k: 0 for k in bot_paths},
+            "bot_errors": {k: [str(exc)] for k in bot_paths},
+            "n_hands": 0,
+        }
+
+
+def _run_one_match_sync(args):
+    """Process-pool worker entry. Runs one match in a fresh asyncio loop.
+
+    Module-level so it pickles cleanly for ProcessPoolExecutor. Each worker
+    process gets its own event loop — events don't compete for the single
+    loop iterator that bottlenecked the prior all-async approach (~12
+    matches progressing despite 80+ scheduled).
+    """
+    match_id, bot_paths, seed, n_hands, env_overrides = args
+    try:
+        return asyncio.run(async_run_match(match_id, bot_paths, n_hands, seed, env_overrides))
+    except Exception as exc:
+        return {
+            "match_id": match_id,
+            "chip_delta": {k: 0 for k in bot_paths},
+            "bot_errors": {k: [str(exc)] for k in bot_paths},
+            "n_hands": 0,
+        }
+
+
+_PERSISTENT_POOL = None
+_PERSISTENT_POOL_SIZE = None
+
+
+def _get_pool(max_concurrent_matches):
+    """Cache a single ProcessPoolExecutor for the lifetime of the calling
+    process. Spawning 192 worker procs takes ~30s; doing it once per trial
+    instead of once per compare() call (3+/trial) reclaims the wasted time."""
+    global _PERSISTENT_POOL, _PERSISTENT_POOL_SIZE
+    if _PERSISTENT_POOL is None or _PERSISTENT_POOL_SIZE != max_concurrent_matches:
+        if _PERSISTENT_POOL is not None:
+            _PERSISTENT_POOL.shutdown(wait=False, cancel_futures=True)
+        import concurrent.futures
+        _PERSISTENT_POOL = concurrent.futures.ProcessPoolExecutor(max_workers=max_concurrent_matches)
+        _PERSISTENT_POOL_SIZE = max_concurrent_matches
+    return _PERSISTENT_POOL
+
+
+def _run_all_tasks(tasks, max_concurrent_matches, show_progress):
+    """Run all match tasks via persistent ProcessPoolExecutor — one worker
+    process per concurrent match. Pool is reused across calls so spawn
+    overhead (~30s for 192 workers) is paid only once per sweep process."""
+    import concurrent.futures
+    exe = _get_pool(max_concurrent_matches)
+    results = [None] * len(tasks)
+    pbar = None
     if show_progress:
         import tqdm
         pbar = tqdm.tqdm(total=len(tasks), desc="Matches")
-        async def tracking_worker(t):
-            res = await _run_one_match_task(sem, t)
+    fut_to_idx = {exe.submit(_run_one_match_inproc, t): i for i, t in enumerate(tasks)}
+    for fut in concurrent.futures.as_completed(fut_to_idx):
+        i = fut_to_idx[fut]
+        try:
+            results[i] = fut.result()
+        except Exception as exc:
+            args = tasks[i]
+            match_id, bot_paths, *_ = args
+            results[i] = {
+                "match_id": match_id,
+                "chip_delta": {k: 0 for k in bot_paths},
+                "bot_errors": {k: [str(exc)] for k in bot_paths},
+                "n_hands": 0,
+            }
+        if pbar is not None:
             pbar.update(1)
-            return res
-        coros = [tracking_worker(t) for t in tasks]
-        results = await asyncio.gather(*coros)
+    if pbar is not None:
         pbar.close()
-        return results
-    else:
-        coros = [_run_one_match_task(sem, t) for t in tasks]
-        return await asyncio.gather(*coros)
+    return results
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -262,7 +417,11 @@ def compare(
     max_concurrent_matches: int = None,
 ) -> dict:
     if max_concurrent_matches is None:
-        max_concurrent_matches = min(n_workers * 4, 192)
+        # Each bot subprocess spends ~50% of its time blocked on pipe I/O —
+        # oversubscribe 2x past vCPU count to keep cores fed while one match
+        # waits for the next round-trip. Empirically 384 works on c7i.48xlarge
+        # (192 vCPU) without thrashing.
+        max_concurrent_matches = n_workers * 4
 
     if mode.lower() == "hu":
         return _compare_hu(
@@ -364,7 +523,7 @@ def _compare_6max(
                 tasks.append((mid_swap, bot_b_swap_dict, actual_seed, n_hands, env_overrides))
                 task_meta.append((table_id, "b_swapped", i, arr2_seat))
 
-    results = asyncio.run(_run_all_tasks(tasks, max_concurrent_matches, show_progress))
+    results = _run_all_tasks(tasks, max_concurrent_matches, show_progress)
 
     raw = {}
     for (table_id, config_key, local_i, test_seat), result in zip(task_meta, results):
@@ -463,7 +622,7 @@ def _compare_hu(
                 tasks.append((mid_swap, {opp_id: opp_path, "bot_b": bot_b_path}, actual_seed, n_hands, env_overrides))
                 task_meta.append((opp_id, "b_swapped", i))
 
-    results = asyncio.run(_run_all_tasks(tasks, max_concurrent_matches, show_progress))
+    results = _run_all_tasks(tasks, max_concurrent_matches, show_progress)
 
     raw = {}
     for (opp_id, config_key, local_i), result in zip(task_meta, results):
