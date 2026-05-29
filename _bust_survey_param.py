@@ -21,6 +21,12 @@ elif POOL_TYPE == "heldout":
     full = load_pool(include_heldout=True)
     train = load_pool(include_heldout=False)
     pool = {k: v for k, v in full.items() if k not in train}
+elif POOL_TYPE == "train_v81":
+    from harness.opponents.registry import TRAIN_EXPANDED_V81
+    pool = dict(TRAIN_EXPANDED_V81)
+elif POOL_TYPE == "heldout_v81":
+    from harness.opponents.registry import UNSEEN_VALIDATION_V81
+    pool = dict(UNSEEN_VALIDATION_V81)
 else:
     pool = load_pool(include_heldout=True)
 

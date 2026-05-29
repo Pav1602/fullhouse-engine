@@ -1,0 +1,359 @@
+{
+  "skant": "skantbot7.13",
+  "n_matches": 12,
+  "n_hands": 200,
+  "train": {
+    "skantbot7.13": {
+      "hands_played": 1940,
+      "vpip": 0.2711340206185567,
+      "pfr": 0.2036082474226804,
+      "af": 2.3417721518987342,
+      "postflop_calls": 79,
+      "postflop_bets_raises": 185,
+      "mean_bet_pct_pot": 0.7655112212830913,
+      "wtsd": 0.05824742268041237,
+      "postflop_actions": 264
+    },
+    "shark": {
+      "hands_played": 1082,
+      "vpip": 0.00831792975970425,
+      "pfr": 0.0073937153419593345,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 12,
+      "mean_bet_pct_pot": 0.564284620239967,
+      "wtsd": 0.019408502772643253,
+      "postflop_actions": 12
+    },
+    "all_in_monkey": {
+      "hands_played": 8,
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.375,
+      "postflop_actions": 0
+    },
+    "uniform_random": {
+      "hands_played": 100,
+      "vpip": 0.73,
+      "pfr": 0.35,
+      "af": 0.17567567567567569,
+      "postflop_calls": 74,
+      "postflop_bets_raises": 13,
+      "mean_bet_pct_pot": 0.31557595879169215,
+      "wtsd": 0.47,
+      "postflop_actions": 87
+    },
+    "chatgpt-2": {
+      "hands_played": 304,
+      "vpip": 0.375,
+      "pfr": 0.17434210526315788,
+      "af": 1.4772727272727273,
+      "postflop_calls": 44,
+      "postflop_bets_raises": 65,
+      "mean_bet_pct_pot": 0.8503751543039721,
+      "wtsd": 0.1513157894736842,
+      "postflop_actions": 109
+    },
+    "aggressor": {
+      "hands_played": 95,
+      "vpip": 0.7052631578947368,
+      "pfr": 0.45263157894736844,
+      "af": 0.5294117647058824,
+      "postflop_calls": 34,
+      "postflop_bets_raises": 18,
+      "mean_bet_pct_pot": 0.8381741690434762,
+      "wtsd": 0.3368421052631579,
+      "postflop_actions": 52
+    },
+    "ref_bot_2": {
+      "hands_played": 791,
+      "vpip": 0.28192161820480405,
+      "pfr": 0.0,
+      "af": 0.0,
+      "postflop_calls": 432,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.23135271807838179,
+      "postflop_actions": 432
+    },
+    "chatgpt-12": {
+      "hands_played": 95,
+      "vpip": 0.10526315789473684,
+      "pfr": 0.031578947368421054,
+      "af": 0.5294117647058824,
+      "postflop_calls": 17,
+      "postflop_bets_raises": 9,
+      "mean_bet_pct_pot": 0.7975498027512605,
+      "wtsd": 0.06315789473684211,
+      "postflop_actions": 26
+    },
+    "overbet_bot": {
+      "hands_played": 597,
+      "vpip": 0.7587939698492462,
+      "pfr": 0.7587939698492462,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 74,
+      "mean_bet_pct_pot": 2.649705272130465,
+      "wtsd": 0.038525963149078725,
+      "postflop_actions": 74
+    },
+    "minbet_bot": {
+      "hands_played": 3,
+      "vpip": 1.0,
+      "pfr": 1.0,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 3,
+      "mean_bet_pct_pot": 0.006826150605726344,
+      "wtsd": 0.6666666666666666,
+      "postflop_actions": 3
+    },
+    "min_raiser": {
+      "hands_played": 362,
+      "vpip": 0.8259668508287292,
+      "pfr": 0.8259668508287292,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 716,
+      "mean_bet_pct_pot": 0.1807962789070165,
+      "wtsd": 0.6546961325966851,
+      "postflop_actions": 716
+    },
+    "mathematician": {
+      "hands_played": 600,
+      "vpip": 0.18666666666666668,
+      "pfr": 0.0,
+      "af": 0.0,
+      "postflop_calls": 251,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.18833333333333332,
+      "postflop_actions": 251
+    },
+    "gemini-11": {
+      "hands_played": 414,
+      "vpip": 0.09420289855072464,
+      "pfr": 0.06280193236714976,
+      "af": 1.5714285714285714,
+      "postflop_calls": 14,
+      "postflop_bets_raises": 22,
+      "mean_bet_pct_pot": 0.5409160020605527,
+      "wtsd": 0.04106280193236715,
+      "postflop_actions": 36
+    },
+    "push_fold": {
+      "hands_played": 215,
+      "vpip": 0.3302325581395349,
+      "pfr": 0.3302325581395349,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.027906976744186046,
+      "postflop_actions": 0
+    },
+    "grok-3": {
+      "hands_played": 400,
+      "vpip": 0.0,
+      "pfr": 0.0,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.0,
+      "postflop_actions": 0
+    },
+    "gemini-6": {
+      "hands_played": 400,
+      "vpip": 0.025,
+      "pfr": 0.0175,
+      "af": 6.0,
+      "postflop_calls": 2,
+      "postflop_bets_raises": 12,
+      "mean_bet_pct_pot": 0.6584919836130378,
+      "wtsd": 0.0225,
+      "postflop_actions": 14
+    },
+    "calling_station": {
+      "hands_played": 6,
+      "vpip": 1.0,
+      "pfr": 0.0,
+      "af": 0.0,
+      "postflop_calls": 5,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 1.0,
+      "postflop_actions": 5
+    },
+    "claude-4": {
+      "hands_played": 136,
+      "vpip": 0.16911764705882354,
+      "pfr": 0.09558823529411764,
+      "af": 0.043478260869565216,
+      "postflop_calls": 23,
+      "postflop_bets_raises": 1,
+      "mean_bet_pct_pot": 0.55,
+      "wtsd": 0.1323529411764706,
+      "postflop_actions": 24
+    },
+    "deepseek-5": {
+      "hands_played": 203,
+      "vpip": 0.16748768472906403,
+      "pfr": 0.16748768472906403,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 8,
+      "mean_bet_pct_pot": 0.7731049692604212,
+      "wtsd": 0.029556650246305417,
+      "postflop_actions": 8
+    },
+    "gemini-1": {
+      "hands_played": 446,
+      "vpip": 0.053811659192825115,
+      "pfr": 0.053811659192825115,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 27,
+      "mean_bet_pct_pot": 0.20352703911765996,
+      "wtsd": 0.02466367713004484,
+      "postflop_actions": 27
+    },
+    "chatgpt-7": {
+      "hands_played": 400,
+      "vpip": 0.14,
+      "pfr": 0.045,
+      "af": 3.1538461538461537,
+      "postflop_calls": 13,
+      "postflop_bets_raises": 41,
+      "mean_bet_pct_pot": 0.73282857745799,
+      "wtsd": 0.06,
+      "postflop_actions": 54
+    },
+    "donk_bot": {
+      "hands_played": 35,
+      "vpip": 0.8285714285714286,
+      "pfr": 0.0,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 65,
+      "mean_bet_pct_pot": 0.5819807381249874,
+      "wtsd": 0.4,
+      "postflop_actions": 65
+    }
+  },
+  "heldout": {
+    "claude-9": {
+      "hands_played": 1528,
+      "vpip": 0.0281413612565445,
+      "pfr": 0.025523560209424083,
+      "af": 4.1875,
+      "postflop_calls": 16,
+      "postflop_bets_raises": 67,
+      "mean_bet_pct_pot": 0.39135142289291436,
+      "wtsd": 0.02225130890052356,
+      "postflop_actions": 83
+    },
+    "skantbot7.13": {
+      "hands_played": 1967,
+      "vpip": 0.23894255210981188,
+      "pfr": 0.20742247076766648,
+      "af": 3.3333333333333335,
+      "postflop_calls": 84,
+      "postflop_bets_raises": 280,
+      "mean_bet_pct_pot": 0.8529346614726103,
+      "wtsd": 0.06456532791052363,
+      "postflop_actions": 364
+    },
+    "maniac_aggro": {
+      "hands_played": 192,
+      "vpip": 0.65625,
+      "pfr": 0.65625,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 56,
+      "mean_bet_pct_pot": 0.8719445513643417,
+      "wtsd": 0.10416666666666667,
+      "postflop_actions": 56
+    },
+    "grok-8": {
+      "hands_played": 188,
+      "vpip": 0.9095744680851063,
+      "pfr": 0.574468085106383,
+      "af": 0.0,
+      "postflop_calls": 62,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.5425531914893617,
+      "postflop_actions": 62
+    },
+    "deepseek-10": {
+      "hands_played": 1213,
+      "vpip": 0.1079967023907667,
+      "pfr": 0.06265457543281121,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.08573784006595218,
+      "postflop_actions": 0
+    },
+    "fit_or_fold": {
+      "hands_played": 802,
+      "vpip": 0.7930174563591023,
+      "pfr": 0.0,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 458,
+      "mean_bet_pct_pot": 0.9789557800699074,
+      "wtsd": 0.26433915211970077,
+      "postflop_actions": 458
+    },
+    "super_nit": {
+      "hands_played": 1557,
+      "vpip": 0.005780346820809248,
+      "pfr": 0.005780346820809248,
+      "af": null,
+      "postflop_calls": 0,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.030828516377649325,
+      "postflop_actions": 0
+    },
+    "limp_machine": {
+      "hands_played": 85,
+      "vpip": 0.7647058823529411,
+      "pfr": 0.0,
+      "af": 0.0,
+      "postflop_calls": 57,
+      "postflop_bets_raises": 0,
+      "mean_bet_pct_pot": null,
+      "wtsd": 0.5764705882352941,
+      "postflop_actions": 57
+    }
+  },
+  "train_agg": {
+    "n_opps": 18,
+    "vpip_median": 0.18666666666666668,
+    "vpip_mean": 0.3214231792967236,
+    "pfr_median": 0.06280193236714976,
+    "af_median": 0.5294117647058824,
+    "af_mean": 1.3480524918504457,
+    "bet_pct_pot_median": 0.6584919836130378,
+    "wtsd_median": 0.06315789473684211
+  },
+  "heldout_agg": {
+    "n_opps": 7,
+    "vpip_median": 0.65625,
+    "vpip_mean": 0.4664951738950386,
+    "pfr_median": 0.025523560209424083,
+    "af_median": 0.0,
+    "af_mean": 1.3958333333333333,
+    "bet_pct_pot_median": 0.8719445513643417,
+    "wtsd_median": 0.10416666666666667
+  }
+}

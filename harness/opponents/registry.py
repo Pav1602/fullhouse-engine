@@ -92,12 +92,55 @@ UNSEEN_VALIDATION.update(_HELDOUT)
 UNSEEN_VALIDATION.update(_NEW_UNSEEN)
 
 # ---------------------------------------------------------------------------
+# V81 rebalanced pools (skantbot8 evaluation)
+#
+# V80b post-mortem (pool_signature_v81.json) confirmed strong cluster
+# separation: train median VPIP=0.19 (LLM tight folders) vs heldout median
+# VPIP=0.66 (station/maniac archetypes). Any TPE optimization on train
+# pushed AWAY from heldout — see V81_PLAN_SKANTBOT8.md §4.
+#
+# Moves:
+#   TRAIN -> HELDOUT (under-represented LLM-tight cluster in heldout):
+#       claude-4, gemini-1, chatgpt-7
+#   HELDOUT -> TRAIN (missing high-VPIP exploitative cluster in train):
+#       fit_or_fold, maniac_aggro
+#
+# Old names are PRESERVED unchanged so existing scripts keep working.
+# ---------------------------------------------------------------------------
+_V81_TRAIN_TO_HELDOUT = ("claude-4", "gemini-1", "chatgpt-7")
+_V81_HELDOUT_TO_TRAIN = ("fit_or_fold", "maniac_aggro")
+
+TRAIN_EXPANDED_V81 = {
+    k: v for k, v in TRAIN_EXPANDED.items() if k not in _V81_TRAIN_TO_HELDOUT
+}
+for _name in _V81_HELDOUT_TO_TRAIN:
+    TRAIN_EXPANDED_V81[_name] = UNSEEN_VALIDATION[_name]
+
+UNSEEN_VALIDATION_V81 = {
+    k: v for k, v in UNSEEN_VALIDATION.items() if k not in _V81_HELDOUT_TO_TRAIN
+}
+for _name in _V81_TRAIN_TO_HELDOUT:
+    UNSEEN_VALIDATION_V81[_name] = TRAIN_EXPANDED[_name]
+
+
+def load_pool_v81(include_heldout: bool = False) -> dict:
+    """V81 rebalanced pool loader. Defaults to TRAIN_EXPANDED_V81; merges
+    UNSEEN_VALIDATION_V81 when include_heldout=True."""
+    pool = dict(TRAIN_EXPANDED_V81)
+    if include_heldout:
+        pool.update(UNSEEN_VALIDATION_V81)
+    return pool
+
+# ---------------------------------------------------------------------------
 # Convenience: absolute path to skantbot4 (latest bot)
 # ---------------------------------------------------------------------------
 SKANTBOT4_PATH = str(_REPO_ROOT / "bots" / "skantbot4" / "bot.py")
 
 # Path to the dev bot for sweeps (with env loading)
-SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot7_13_dev" / "bot.py")
+# V81: points at skantbot8_dev. The 7.13_dev path is preserved for reference
+# scripts that need to baseline against the frozen 7.13.
+SKANTBOT_TUNABLE_PATH = str(_REPO_ROOT / "harness" / "skantbot8_dev" / "bot.py")
+SKANTBOT_7_13_DEV_PATH = str(_REPO_ROOT / "harness" / "skantbot7_13_dev" / "bot.py")
 
 
 def load_pool(include_heldout: bool = False) -> dict:

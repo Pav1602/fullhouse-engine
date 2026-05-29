@@ -1,0 +1,306 @@
+{
+  "bot": "bots/skantbot7.13/bot.py",
+  "scenarios": [
+    {
+      "label": "S1 preflop SB-3bet, hero BB",
+      "agg_seat": 1,
+      "notes": "3-bettor branch; range = THREEBET_FREQS[(SB, BTN)]",
+      "summary": {
+        "size": 24,
+        "total_freq": 24.0,
+        "top": [
+          [
+            "88",
+            1.0
+          ],
+          [
+            "99",
+            1.0
+          ],
+          [
+            "TT",
+            1.0
+          ],
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "A9s",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "label": "S2 flop dry, opp half-pot bet",
+      "agg_seat": 0,
+      "notes": "postflop_raises=1, strength=medium; #1 should NOT fire if bet/pot < threshold",
+      "summary": {
+        "size": 25,
+        "total_freq": 23.0,
+        "top": [
+          [
+            "88",
+            1.0
+          ],
+          [
+            "99",
+            1.0
+          ],
+          [
+            "TT",
+            1.0
+          ],
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "AJs",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "label": "S3 flop dry, opp full-pot bet",
+      "agg_seat": 0,
+      "notes": "postflop_raises=1, bet/pot=1.0; #1 RELATIVE signal should fire IF opp has bet history",
+      "summary": {
+        "size": 25,
+        "total_freq": 23.0,
+        "top": [
+          [
+            "88",
+            1.0
+          ],
+          [
+            "99",
+            1.0
+          ],
+          [
+            "TT",
+            1.0
+          ],
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "AJs",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "label": "S4 turn opp jam",
+      "agg_seat": 0,
+      "notes": "all-in fast-path \u2192 strength=strong regardless",
+      "summary": {
+        "size": 15,
+        "total_freq": 12.0,
+        "top": [
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "AKs",
+            1.0
+          ],
+          [
+            "AKo",
+            1.0
+          ],
+          [
+            "22",
+            1.0
+          ],
+          [
+            "77",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "label": "S5 flop wet, opp full-pot bet",
+      "agg_seat": 0,
+      "notes": "like S3 but wet board \u2014 control",
+      "summary": {
+        "size": 20,
+        "total_freq": 16.0,
+        "top": [
+          [
+            "TT",
+            1.0
+          ],
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "AJs",
+            1.0
+          ],
+          [
+            "AQs",
+            1.0
+          ],
+          [
+            "AKs",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "label": "S6 flop paired, opp half-pot bet",
+      "agg_seat": 0,
+      "notes": "paired board already maps to strength=strong via existing logic",
+      "summary": {
+        "size": 13,
+        "total_freq": 10.0,
+        "top": [
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "AKs",
+            1.0
+          ],
+          [
+            "AKo",
+            1.0
+          ],
+          [
+            "77",
+            1.0
+          ],
+          [
+            "KTs",
+            0.5
+          ]
+        ]
+      }
+    },
+    {
+      "label": "S7 turn, two postflop raises",
+      "agg_seat": 0,
+      "notes": "postflop_raises=2 \u2192 strength=medium; chain progression",
+      "summary": {
+        "size": 25,
+        "total_freq": 23.0,
+        "top": [
+          [
+            "88",
+            1.0
+          ],
+          [
+            "99",
+            1.0
+          ],
+          [
+            "TT",
+            1.0
+          ],
+          [
+            "JJ",
+            1.0
+          ],
+          [
+            "QQ",
+            1.0
+          ],
+          [
+            "KK",
+            1.0
+          ],
+          [
+            "AA",
+            1.0
+          ],
+          [
+            "AJs",
+            1.0
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+
+[train] Running 12 matches × 200 hands vs 23 opps
+  [train] match 10/12
+
+[heldout] Running 12 matches × 200 hands vs 7 opps
+  [heldout] match 10/12
+
+=== TRAIN_EXPANDED ===
+opp                     hands   VPIP    PFR     AF  bet%pot   WTSD
+aggressor                  95 0.71   0.45    0.53       0.84   0.34
+chatgpt-12                 95 0.11   0.03    0.53       0.80   0.06
+chatgpt-2                 304 0.38   0.17    1.48       0.85   0.15
+chatgpt-7                 400 0.14   0.04    3.15       0.73   0.06
+claude-4                  136 0.17   0.10    0.04       0.55   0.13
+deepseek-5                203 0.17   0.17     --        0.77   0.03
+donk_bot                   35 0.83   0.00     --        0.58   0.40
+gemini-1                  446 0.05   0.05     --        0.20   0.02
+gemini-11                 414 0.09   0.06    1.57       0.54   0.04
+gemini-6                  400 0.03   0.02    6.00       0.66   0.02
+grok-3                    400 0.00   0.00     --         --    0.00
+mathematician             600 0.19   0.00    0.00        --    0.19
+min_raiser                362 0.83   0.83     --        0.18   0.65
+overbet_bot               597 0.76   0.76     --        2.65   0.04
+push_fold                 215 0.33   0.33     --         --    0.03
+ref_bot_2                 791 0.28   0.00    0.00        --    0.23
+shark                    1082 0.01   0.01     --        0.56   0.02
+skantbot7.13             1940 0.27   0.20    2.34       0.77   0.06
+uniform_random            100 0.73   0.35    0.18       0.32   0.47
+
+  median VPIP=0.19  PFR=0.06  AF=0.53  bet%pot=0.66  WTSD=0.06
+
+=== UNSEEN_VALIDATION ===
+opp                     hands   VPIP    PFR     AF  bet%pot   WTSD
+claude-9                 1528 0.03   0.03    4.19       0.39   0.02
+deepseek-10              1213 0.11   0.06     --         --    0.09
+fit_or_fold               802 0.79   0.00     --        0.98   0.26
+grok-8                    188 0.91   0.57    0.00        --    0.54
+limp_machine               85 0.76   0.00    0.00        --    0.58
+maniac_aggro              192 0.66   0.66     --        0.87   0.10
+skantbot7.13             1967 0.24   0.21    3.33       0.85   0.06
+super_nit                1557 0.01   0.01     --         --    0.03
+
+  median VPIP=0.66  PFR=0.03  AF=0.00  bet%pot=0.87  WTSD=0.10
+
+=== TRAIN vs HELDOUT DIFFERENCE ===
+  vpip_median             train=0.187  heldout=0.656  ratio_h/t=3.52
+  pfr_median              train=0.063  heldout=0.026  ratio_h/t=0.41
+  af_median               train=0.529  heldout=0.000  ratio_h/t=0.00
+  bet_pct_pot_median      train=0.658  heldout=0.872  ratio_h/t=1.32
+  wtsd_median             train=0.063  heldout=0.104  ratio_h/t=1.65
+
+Saved: harness/results/pool_signature_v81.json
