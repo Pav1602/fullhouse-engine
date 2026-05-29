@@ -1,0 +1,9 @@
+7.13 vs maniac_aggro HU: +400 ± 710
+skantbot8 vs maniac_aggro HU: +800 ± 692
+  Δ (skantbot8 - 7.13) = +400  σ=+0.40
+
+7.13 vs super_nit HU: +10000 ± 0
+skantbot8 vs super_nit HU: +10000 ± 0
+  Δ (skantbot8 - 7.13) = +0  σ=+0.00
+
+✓ GATE F PASS: no >500 chip regression vs maniac_aggro or super_nit

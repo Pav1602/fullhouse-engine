@@ -1,0 +1,36 @@
+a = skantbot8 (bots/skantbot8/bot.py)
+b = skantbot7.13 (bots/skantbot7.13/bot.py)
+pool = train_v81 (22 opps), n_seeds=30, n_tables=20, mode=6max
+
+opp                     skb8_mean  base_mean          Δ    pd_mean    pd_se      σ
+aggressor                    +345       +347         -2         -2       12  -0.14
+all_in_monkey                +342       +314        +28        +28       18  +1.52
+calling_station              +527       +552        -26        -26       18  -1.41
+chatgpt-12                   +330       +339        -10        -10       16  -0.61
+chatgpt-2                    +289       +308        -19        -19       20  -0.94
+deepseek-5                   +339       +331         +8         +8       19  +0.44
+donk_bot                     +488       +516        -28        -28       22  -1.28
+fit_or_fold                  +439       +465        -26        -26       21  -1.25
+gemini-11                    +351       +349         +3         +3       17  +0.17
+gemini-6                     +305       +332        -27        -27       18  -1.48
+grok-3                       +324       +306        +18        +18       15  +1.21
+loose_passive                +552       +545         +7         +7       14  +0.52
+maniac_aggro                 +440       +456        -16        -16       15  -1.03
+mathematician                +421       +434        -12        -12       12  -1.00
+min_raiser                   +451       +449         +2         +2       13  +0.14
+minbet_bot                   +492       +477        +15        +15       17  +0.85
+overbet_bot                  +253       +263        -10        -10       17  -0.62
+push_fold                    +394       +398         -4         -4       19  -0.20
+ref_bot_2                    +427       +455        -28        -28       14  -2.04
+shark                        +319       +318         +1         +1       13  +0.09
+tag_value                    +289       +308        -19        -19       18  -1.06
+uniform_random               +535       +548        -13        -13       18  -0.73
+
+avg Δ across opps: -7 chips/opp
+sum Δ: -158
+worst opp: ref_bot_2 Δ=-28 σ=-2.04
+
+⚠️  >2σ regressions (1):
+    ref_bot_2              Δ=-28 σ=-2.04
+
+Saved: harness/results/gate_DE_skb8_vs_skantbot7_13_train_v81.json

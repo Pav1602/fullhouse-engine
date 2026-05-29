@@ -59,12 +59,12 @@ def state_flop_one_raise(opp_seat, board=("Ks", "7d", "2c")):
 
 
 def state_flop_three_raises(opp_seat, board=("Ks", "7d", "2c")):
-    """Three postflop raises by opp → strong tier."""
+    """Opp's bet then jam (all-in) postflop → strength = strong by all-in path."""
     return {
         "type": "action_request",
         "seat_to_act": 2,
         "community_cards": list(board),
-        "pot": 3000,
+        "pot": 10000,
         "players": players_6max(),
         "action_log": [
             {"seat": 1, "action": "small_blind", "amount": 50},
@@ -76,9 +76,7 @@ def state_flop_three_raises(opp_seat, board=("Ks", "7d", "2c")):
             {"seat": 1, "action": "fold",        "amount": 0},
             {"seat": 2, "action": "call",        "amount": 200},
             {"seat": 2, "action": "check",       "amount": 0},
-            {"seat": 0, "action": "raise",       "amount": 500},
-            {"seat": 2, "action": "raise",       "amount": 1000},
-            {"seat": 0, "action": "raise",       "amount": 1500},
+            {"seat": 0, "action": "all_in",      "amount": 9700},
         ],
     }
 
