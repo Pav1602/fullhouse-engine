@@ -1,0 +1,2 @@
+PASS — paired_diff_mean == 0.0 for all 23 opponents.
+(self-compare on 23 opponents, n_seeds=5)

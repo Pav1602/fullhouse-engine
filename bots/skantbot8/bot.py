@@ -233,6 +233,18 @@ class Config:
     # bust_014 case where pot was 42K. The pot/stack ratio cleanly distinguishes.
     committed_pot_ratio: float = 1.0           # pot >= ratio * INITIAL_STACK -> committed
 
+    # --- V81 #1: bet-sizing signal in range narrowing (skantbot8) ---
+    # Fires the "strong" strength tier when opp's CURRENT bet/pot ratio is
+    # unusually large RELATIVE to their own historical mean_bet_pct_pot.
+    # An ABSOLUTE bet-size signal was tried (see comment at the
+    # aggressor_likely_range Phase 2a block) and rejected because it broke
+    # min_raiser HU. The MIN_OBS / MIN_BETS guards prevent cold-start firing,
+    # because mean_bet_pct_pot defaults to 0.66 when bet_size_pcts is empty,
+    # which would re-create the absolute-threshold landmine.
+    skb8_bet_to_mean_multiplier: float = 1.5
+    skb8_min_obs_for_signal: int = 30
+    skb8_min_bets_obs_for_signal: int = 5
+
     # --- Time/sim budget ---
     mc_sims_flop: int = 300
     mc_sims_turn: int = 400
@@ -1342,6 +1354,32 @@ def aggressor_likely_range(state: dict, agg_seat: int) -> dict:
     # See STAGE_EF_FINDINGS.md Stage 3.
     if _aggressor_last_action_is_allin(state, agg_seat):
         strength = "strong"
+
+    # V81 #1: bet-sizing signal RELATIVE to opp's own mean_bet_pct_pot.
+    # Bumps strength to "strong" when opp's current postflop bet/pot ratio
+    # is at least `skb8_bet_to_mean_multiplier` × their historical mean.
+    # MIN_OBS guards prevent cold-start; default mean=0.66 was the absolute
+    # threshold that broke min_raiser HU when first attempted.
+    if strength != "strong":
+        agg_bid_for_signal = next(
+            (p.get("bot_id") for p in state.get("players", [])
+             if p.get("seat") == agg_seat), None)
+        prof_for_signal = OPPONENTS.get(agg_bid_for_signal) if agg_bid_for_signal else None
+        if (prof_for_signal is not None
+                and prof_for_signal.hands_observed >= CONFIG.skb8_min_obs_for_signal
+                and len(prof_for_signal.bet_size_pcts) >= CONFIG.skb8_min_bets_obs_for_signal):
+            log = state.get("action_log", [])
+            last_raise = next(
+                (e for e in reversed(log)
+                 if e.get("seat") == agg_seat
+                 and e.get("action") in ("raise", "all_in")), None)
+            pot_now = state.get("pot", 0)
+            if last_raise and pot_now > 0:
+                bet_to_pot = last_raise.get("amount", 0) / pot_now
+                mean_bpp = prof_for_signal.mean_bet_pct_pot
+                if (mean_bpp > 0 and
+                        bet_to_pot >= CONFIG.skb8_bet_to_mean_multiplier * mean_bpp):
+                    strength = "strong"
 
     narrowed = _narrow_range(base_range, strength, board=board)
 

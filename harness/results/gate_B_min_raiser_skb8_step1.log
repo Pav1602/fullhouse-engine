@@ -1,0 +1,5 @@
+7.13 vs min_raiser HU: +7300 ± 468
+skantbot8 vs min_raiser HU: +7200 ± 473
+
+Δ (skantbot8 - 7.13) = -100 chips/match (pooled SE 666, σ=-0.15)
+✓ GATE PASS: min_raiser HU preserved (>=+3000)

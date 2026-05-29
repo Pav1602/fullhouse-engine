@@ -1,0 +1,21 @@
+BASE: harness/results/bust_survey_skantbot7.13_heldout_v81_n100.json
+  76 busts, $415,712 loss, 19999 hands
+NEW:  harness/results/bust_survey_skantbot8_heldout_v81_n100.json
+  77 busts, $396,243 loss, 19898 hands
+
+Δ (NEW - BASE):  busts=+1  loss=$-19,469
+   pct busts: +1.3%
+   pct loss:  -4.7%
+
+=== By final_street ===
+street     BASE_n  NEW_n    Δn      BASE_$      NEW_$         Δ$
+preflop         1      1    +0  $    3,701 $    3,701 $       +0
+river          75     76    +1  $  412,011 $  392,542 $  -19,469
+
+=== By showdown role ===
+showdown                  BASE:   73 ($   401,495)  NEW:   75 ($   389,678)  Δ: +2 (-11,817)
+fold_or_uncontested       BASE:    3 ($    14,217)  NEW:    2 ($     6,565)  Δ: -1 (-7,652)
+
+=== Gate C check (hero-call proxy: showdown busts) ===
+Showdown bust growth: +2.7% (BASE=73, NEW=75)
+✓ GATE C PASS
