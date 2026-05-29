@@ -127,8 +127,8 @@ def measure(bot, state, label):
 
 
 def main():
-    b11 = load("bots/skantbot7.11/bot.py")
-    b10 = load("bots/skantbot7.10/bot.py")
+    b11 = load("bots/skantbot7.12/bot.py")  # 7.12 = 7.11 + structural + logging
+    b10 = load("bots/skantbot7.11/bot.py")  # clean 7.11 (commit 6d28b2c) for comparison
     print("=" * 78)
     print("Paper-hand verifications for 7.11 vs 7.10")
     print("=" * 78)

@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from sandbox.match import run_match
 
 parser = argparse.ArgumentParser(description="Play heads-up against a skantbot")
-parser.add_argument("--bot", default="skantbot7.9",
-                    help="Bot to play against (default: skantbot7.9). Examples: skantbot7, skantbot7.3, skantbot4")
+parser.add_argument("--bot", default="skantbot7.13",
+                    help="Bot to play against (default: skantbot7.13). Examples: skantbot7, skantbot7.3, skantbot4")
 parser.add_argument("--hands", type=int, default=200, help="Hands per match (default: 200)")
 parser.add_argument("--seed", type=int, default=None, help="Optional seed for reproducible deck")
 args = parser.parse_args()

@@ -17,8 +17,8 @@ from sandbox.match import run_match, STARTING_STACK
 from harness.opponents.registry import load_pool
 
 
-SKANT = "skantbot7.10"
-SKANT_PATH = "bots/skantbot7.10/bot.py"
+SKANT = "skantbot7.11"
+SKANT_PATH = "bots/skantbot7.11/bot.py"
 LOSS_THRESHOLD = 2000   # hand loss >= this triggers bust classification
 
 
