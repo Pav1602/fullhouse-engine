@@ -1,0 +1,22 @@
+a = skantbot8.1 (bots/skantbot8.1/bot.py)
+b = skantbot8 (bots/skantbot8/bot.py)
+pool = heldout_v81 (8 opps), n_seeds=40, n_tables=20, mode=6max
+
+opp                    skantbot8.  base_mean          Δ    pd_mean    pd_se      σ
+chatgpt-7                   +2556      +2559         -4         -4       35  -0.10
+claude-4                    +3182      +3206        -23        -23       52  -0.45
+claude-9                    +2702      +2742        -40        -40       43  -0.93
+deepseek-10                 +3022      +3014         +8         +8       32  +0.25
+gemini-1                    +2442      +2468        -26        -26       33  -0.79
+grok-8                      +2494      +2542        -48        -48       49  -0.98
+limp_machine                +3515      +3571        -56        -56       48  -1.17
+super_nit                   +2851      +2877        -26        -26       46  -0.57
+
+avg Δ across opps: -27 chips/opp
+sum Δ: -216
+worst opp: limp_machine Δ=-56 σ=-1.17
+
+Saved: harness/results/gate_DE_skantbot8_1_vs_skantbot8_heldout_v81.json
+
+Gate verdict (heldout_v81): rule = avg_delta > 0 OR no >2σ regression
+✓ PASS  (avg_delta=-27, n_regressions=0)

@@ -1,0 +1,9 @@
+Surveying skantbot8.1 against heldout_v81 pool (8 opps), 100 matches × 200 hands
+  match 20/100: cum_busts=11, cum_loss=$46,714
+  match 40/100: cum_busts=30, cum_loss=$130,703
+  match 60/100: cum_busts=41, cum_loss=$207,931
+  match 80/100: cum_busts=60, cum_loss=$331,815
+  match 100/100: cum_busts=77, cum_loss=$414,854
+
+skantbot8.1 on heldout_v81: 77 busts, $414,854 loss over 20000 hands
+Saved: harness/results/bust_survey_skantbot8.1_heldout_v81_n100.json

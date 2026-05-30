@@ -1,0 +1,10 @@
+
+✅ PASSED  —  bots/skantbot8.1/bot.py
+
+
+Test results:
+  ✓ [0.000s] preflop_call_or_fold: {'action': 'raise', 'amount': 201}
+  ✓ [0.001s] postflop_can_check: {'action': 'check'}
+  ✓ [0.001s] river_facing_large_bet: {'action': 'call'}
+  ✓ [0.000s] short_stack_all_in_decision: {'action': 'fold'}
+

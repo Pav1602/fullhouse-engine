@@ -1,0 +1,3 @@
+  vs maniac_aggro: 7.13=+400 skb81=-100 Δ=-500
+  vs super_nit: 7.13=+10000 skb81=+10000 Δ=+0
+PASS: no >500 chip regression vs maniac/super_nit

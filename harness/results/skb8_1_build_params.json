@@ -1,0 +1,34 @@
+{
+  "best_score": 1294.7396540751856,
+  "best_params": {
+    "equity_call_threshold": 0.4340568549542513,
+    "pot_odds_buffer_normal": 0.08532110183886801,
+    "equity_thin_value": 0.43390383686395817,
+    "bluff_freq_ip": 0.02266405733280525,
+    "bluff_freq_oop": 0.04982409868438015,
+    "cbet_freq_base": 0.6372901014972446,
+    "threebet_call_threshold_pct": 0.18003892052437015,
+    "fourbet_call_threshold_pct": 0.1296778323913867,
+    "fourbet_bluff_freq": 0.1064617535920478,
+    "k_commit": 0.007314727086282903,
+    "river_v2b_half_pot": 2.6227859843348043,
+    "skb8_bet_to_mean_multiplier": 1.6652147351691389,
+    "skb8_min_obs_for_signal": 31,
+    "skb8_min_bets_obs_for_signal": 3
+  },
+  "user_attrs": {
+    "held_chatgpt-7_mean": 1833.9614285714285,
+    "held_claude-4_mean": 2378.4757142857147,
+    "held_claude-9_mean": 2189.4692857142863,
+    "held_deepseek-10_mean": 2162.805,
+    "held_gemini-1_mean": 1807.2892857142858,
+    "held_grok-8_mean": 2162.012142857143,
+    "held_limp_machine_mean": 2761.157857142857,
+    "held_mean": 2216.742410714286,
+    "held_min": 1807.2892857142858,
+    "held_super_nit_mean": 2438.7685714285712,
+    "seconds": 40.56,
+    "train_mean": 525.9152066165356,
+    "train_worst": 298.0350746268657
+  }
+}

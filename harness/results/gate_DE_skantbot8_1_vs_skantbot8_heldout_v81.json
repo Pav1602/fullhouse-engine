@@ -1,0 +1,87 @@
+{
+  "pool": "heldout_v81",
+  "n_seeds": 40,
+  "n_tables": 20,
+  "skb8_path": "bots/skantbot8.1/bot.py",
+  "baseline_path": "bots/skantbot8/bot.py",
+  "avg_delta": -26.980357142856747,
+  "sum_delta": -215.84285714285397,
+  "worst_opp": "limp_machine",
+  "worst_delta": -56.08214285714212,
+  "worst_sigma": -1.1683697148384322,
+  "over_2sigma_loss": [],
+  "per_opp": {
+    "claude-9": {
+      "a_mean": 2701.7621428571433,
+      "a_stderr": 308.92290593540827,
+      "b_mean": 2741.615,
+      "b_stderr": 318.4061776889602,
+      "paired_diff_mean": -39.852857142857154,
+      "paired_diff_stderr": 42.96449203298884,
+      "n": 1400
+    },
+    "limp_machine": {
+      "a_mean": 3514.715714285715,
+      "a_stderr": 324.42956419462513,
+      "b_mean": 3570.797857142857,
+      "b_stderr": 325.14142747692836,
+      "paired_diff_mean": -56.08214285714285,
+      "paired_diff_stderr": 48.00033940018563,
+      "n": 1400
+    },
+    "chatgpt-7": {
+      "a_mean": 2555.8599999999997,
+      "a_stderr": 307.3262312730869,
+      "b_mean": 2559.49,
+      "b_stderr": 299.5271431093411,
+      "paired_diff_mean": -3.629999999999995,
+      "paired_diff_stderr": 34.98814651169063,
+      "n": 1400
+    },
+    "claude-4": {
+      "a_mean": 3182.2982142857145,
+      "a_stderr": 335.44736845705677,
+      "b_mean": 3205.695357142857,
+      "b_stderr": 338.9586379735,
+      "paired_diff_mean": -23.397142857142846,
+      "paired_diff_stderr": 51.768597333982036,
+      "n": 1400
+    },
+    "gemini-1": {
+      "a_mean": 2442.161428571429,
+      "a_stderr": 225.2088487428799,
+      "b_mean": 2468.4321428571425,
+      "b_stderr": 229.65634413245613,
+      "paired_diff_mean": -26.270714285714284,
+      "paired_diff_stderr": 33.164247472001435,
+      "n": 1400
+    },
+    "deepseek-10": {
+      "a_mean": 3021.6275,
+      "a_stderr": 363.60533301818424,
+      "b_mean": 3013.5224999999996,
+      "b_stderr": 364.9149861603689,
+      "paired_diff_mean": 8.105000000000008,
+      "paired_diff_stderr": 31.943049971654187,
+      "n": 1400
+    },
+    "grok-8": {
+      "a_mean": 2493.9407142857144,
+      "a_stderr": 236.04885478021754,
+      "b_mean": 2542.2046428571425,
+      "b_stderr": 243.81915344724783,
+      "paired_diff_mean": -48.26392857142857,
+      "paired_diff_stderr": 49.089598186887414,
+      "n": 1400
+    },
+    "super_nit": {
+      "a_mean": 2850.912857142857,
+      "a_stderr": 327.21957523887204,
+      "b_mean": 2877.3639285714285,
+      "b_stderr": 327.5394808002092,
+      "paired_diff_mean": -26.45107142857142,
+      "paired_diff_stderr": 46.29040855517137,
+      "n": 1400
+    }
+  }
+}

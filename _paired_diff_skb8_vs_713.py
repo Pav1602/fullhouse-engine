@@ -20,6 +20,7 @@ def main():
     n_seeds = int(sys.argv[2]) if len(sys.argv) > 2 else 30
     n_tables = int(sys.argv[3]) if len(sys.argv) > 3 else 20
     baseline_path = sys.argv[4] if len(sys.argv) > 4 else "bots/skantbot7.13/bot.py"
+    bot_a_override = sys.argv[5] if len(sys.argv) > 5 else "bots/skantbot8/bot.py"
 
     from harness.match_runner import compare
     from harness.opponents.registry import (
@@ -33,9 +34,10 @@ def main():
     else:
         sys.exit(f"unknown pool: {pool_type}")
 
-    skb8_path = "bots/skantbot8/bot.py"
+    skb8_path = bot_a_override
+    a_label = skb8_path.rsplit("/", 2)[-2]
     base_label = baseline_path.rsplit("/", 2)[-2]
-    print(f"a = skantbot8 ({skb8_path})")
+    print(f"a = {a_label} ({skb8_path})")
     print(f"b = {base_label} ({baseline_path})")
     print(f"pool = {pool_type} ({len(pool)} opps), n_seeds={n_seeds}, "
           f"n_tables={n_tables}, mode=6max")
@@ -51,7 +53,7 @@ def main():
     from harness.match_runner import aggregate_by_opponent
     agg = aggregate_by_opponent(res)
 
-    print(f"{'opp':<22} {'skb8_mean':>10} {'base_mean':>10} {'Δ':>10} "
+    print(f"{'opp':<22} {a_label[:10]:>10} {'base_mean':>10} {'Δ':>10} "
           f"{'pd_mean':>10} {'pd_se':>8} {'σ':>6}")
     sum_delta = 0.0
     worst = (None, 0.0, 0.0)
@@ -90,10 +92,32 @@ def main():
         "over_2sigma_loss": over_2sigma_loss,
         "per_opp": {k: dict(v) for k, v in agg.items()},
     }
-    out_path = f"harness/results/gate_DE_skb8_vs_{base_label.replace('.','_')}_{pool_type}.json"
+    out_path = f"harness/results/gate_DE_{a_label.replace('.','_')}_vs_{base_label.replace('.','_')}_{pool_type}.json"
     with open(out_path, "w") as f:
         json.dump(out, f, indent=2, default=str)
     print(f"\nSaved: {out_path}")
+
+    # --- Gate verdict ---
+    # Train pool (train_v81): require avg_delta > 0 AND no >2σ regression.
+    # Heldout pool (heldout_v81): require avg_delta > 0 OR no >2σ regression.
+    has_2sigma_loss = bool(over_2sigma_loss)
+    if pool_type == "train_v81":
+        passed = (avg_delta > 0) and (not has_2sigma_loss)
+        rule = "avg_delta > 0 AND no >2σ regression"
+    elif pool_type == "heldout_v81":
+        passed = (avg_delta > 0) or (not has_2sigma_loss)
+        rule = "avg_delta > 0 OR no >2σ regression"
+    else:
+        passed = True
+        rule = "no-op"
+    print(f"\nGate verdict ({pool_type}): rule = {rule}")
+    if passed:
+        print(f"✓ PASS  (avg_delta={avg_delta:+.0f}, "
+              f"n_regressions={len(over_2sigma_loss)})")
+    else:
+        print(f"✗ FAIL  (avg_delta={avg_delta:+.0f}, "
+              f"n_regressions={len(over_2sigma_loss)})")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

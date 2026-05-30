@@ -1,0 +1,223 @@
+
+=== Gate A: validator on skantbot8.1/bot.py ===
+  cmd: .venv/bin/python sandbox/validator.py bots/skantbot8.1/bot.py
+
+✅ PASSED  —  bots/skantbot8.1/bot.py
+
+
+Test results:
+  ✓ [0.000s] preflop_call_or_fold: {'action': 'raise', 'amount': 201}
+  ✓ [0.001s] postflop_can_check: {'action': 'check'}
+  ✓ [0.001s] river_facing_large_bet: {'action': 'call'}
+  ✓ [0.000s] short_stack_all_in_decision: {'action': 'fold'}
+
+
+
+=== Gate A: pytest tests/ ===
+  cmd: .venv/bin/python -m pytest tests/ -q
+
+.venv/lib/python3.14/site-packages/eval7/rangestring.py:167
+  /home/gsgill/Projects/Poker-bot/fullhouse-engine/.venv/lib/python3.14/site-packages/eval7/rangestring.py:167: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    handtype.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv/lib/python3.14/site-packages/eval7/rangestring.py:175
+  /home/gsgill/Projects/Poker-bot/fullhouse-engine/.venv/lib/python3.14/site-packages/eval7/rangestring.py:175: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    hand_group_list = pyparsing.Group(pyparsing.delimitedList(handtype_group))
+
+.venv/lib/python3.14/site-packages/eval7/rangestring.py:180
+  /home/gsgill/Projects/Poker-bot/fullhouse-engine/.venv/lib/python3.14/site-packages/eval7/rangestring.py:180: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    handrange = pyparsing.Optional(pyparsing.delimitedList(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+25 passed, 7 warnings in 0.14s
+
+
+=== Gate A: CRN on skantbot8.1_dev ===
+  cmd: .venv/bin/python -c 
+import sys; sys.path.insert(0, ".")
+from harness.match_runner import compare, aggregate_by_opponent
+from harness.opponents.registry import load_pool
+pool = load_pool(include_heldout=False)
+res = compare(
+    bot_a_path="harness/skantbot8.1_dev/bot.py",
+    bot_b_path="harness/skantbot8.1_dev/bot.py",
+    opponent_pool=pool, n_seeds=5, n_workers=12, n_hands=200,
+    show_progress=False, mode="6max", n_tables=5,
+)
+agg = aggregate_by_opponent(res)
+nonzero = [(opp, s["paired_diff_mean"]) for opp, s in agg.items()
+           if abs(s.get("paired_diff_mean", 0)) > 1e-9]
+if nonzero:
+    print("FAIL — CRN broken:")
+    for opp, pd in nonzero: print(f"  {opp}: {pd}")
+    sys.exit(1)
+print(f"PASS — paired_diff_mean == 0 for all {len(agg)} opps")
+
+PASS — paired_diff_mean == 0 for all 23 opps
+
+
+=== Gate B: skantbot8.1 vs min_raiser HU >= +5000 ===
+  cmd: .venv/bin/python -c 
+import sys; sys.path.insert(0, ".")
+from harness.match_runner import compare
+MIN_RAISER = "harness/opponents/archetypes/min_raiser/bot.py"
+def go(path, lbl):
+    r = compare(bot_a_path=path, bot_b_path=path,
+                opponent_pool={"min_raiser": MIN_RAISER},
+                n_seeds=100, n_workers=4, n_hands=400,
+                show_progress=False, mode="hu")["min_raiser"]
+    print(f"{lbl}: {r['a_mean']:+.0f} ± {r['a_stderr']:.0f}")
+    return r
+r13 = go("bots/skantbot7.13/bot.py", "7.13")
+r8  = go("bots/skantbot8/bot.py",    "skantbot8 (#1 only)")
+r81 = go("bots/skantbot8.1/bot.py",  "skantbot8.1 (sweep best)")
+print(f"Δ (skb8.1 - skb8)   = {r81['a_mean']-r8['a_mean']:+.0f}")
+print(f"Δ (skb8.1 - 7.13)   = {r81['a_mean']-r13['a_mean']:+.0f}")
+if r81["a_mean"] < 5000:
+    print(f"FAIL: skb8.1 vs min_raiser HU = {r81['a_mean']:+.0f} < +5000")
+    sys.exit(1)
+print("PASS")
+
+7.13: +7200 ± 473
+skantbot8 (#1 only): +7100 ± 478
+skantbot8.1 (sweep best): +7600 ± 452
+Δ (skb8.1 - skb8)   = +500
+Δ (skb8.1 - 7.13)   = +400
+PASS
+
+
+=== Gate D: skantbot8.1 vs 7.13 on TRAIN_EXPANDED_V81 (n=40) ===
+  cmd: .venv/bin/python _paired_diff_skb8_vs_713.py train_v81 40 20 bots/skantbot7.13/bot.py bots/skantbot8.1/bot.py
+overbet_bot                  +286       +289         -3         -3        7  -0.43
+push_fold                    +299       +289        +10        +10       10  +0.99
+ref_bot_2                    +318       +324         -6         -6       11  -0.52
+shark                        +263       +258         +5         +5       10  +0.48
+tag_value                    +283       +271        +12        +12       11  +1.11
+uniform_random               +396       +399         -2         -2       12  -0.20
+
+avg Δ across opps: +3 chips/opp
+sum Δ: +76
+worst opp: min_raiser Δ=-8 σ=-0.62
+
+Saved: harness/results/gate_DE_skantbot8_1_vs_skantbot7_13_train_v81.json
+
+Gate verdict (train_v81): rule = avg_delta > 0 AND no >2σ regression
+✓ PASS  (avg_delta=+3, n_regressions=0)
+
+
+=== Gate E: skantbot8.1 vs 7.13 on UNSEEN_VALIDATION_V81 (n=40) ===
+  cmd: .venv/bin/python _paired_diff_skb8_vs_713.py heldout_v81 40 20 bots/skantbot7.13/bot.py bots/skantbot8.1/bot.py
+claude-9                    +2818      +2847        -29        -29       38  -0.77
+deepseek-10                 +3086      +3068        +18        +18       39  +0.46
+gemini-1                    +2525      +2517         +8         +8       24  +0.33
+grok-8                      +2571      +2616        -45        -45       40  -1.15
+limp_machine                +3623      +3616         +7         +7       25  +0.26
+super_nit                   +2905      +2959        -54        -54       33  -1.62
+
+avg Δ across opps: -15 chips/opp
+sum Δ: -123
+worst opp: super_nit Δ=-54 σ=-1.62
+
+Saved: harness/results/gate_DE_skantbot8_1_vs_skantbot7_13_heldout_v81.json
+
+Gate verdict (heldout_v81): rule = avg_delta > 0 OR no >2σ regression
+✓ PASS  (avg_delta=-15, n_regressions=0)
+
+
+=== Bonus: skantbot8.1 vs skantbot8 on HELDOUT_V81 (n=40) ===
+  cmd: .venv/bin/python _paired_diff_skb8_vs_713.py heldout_v81 40 20 bots/skantbot8/bot.py bots/skantbot8.1/bot.py
+claude-9                    +2702      +2742        -40        -40       43  -0.93
+deepseek-10                 +3022      +3014         +8         +8       32  +0.25
+gemini-1                    +2442      +2468        -26        -26       33  -0.79
+grok-8                      +2494      +2542        -48        -48       49  -0.98
+limp_machine                +3515      +3571        -56        -56       48  -1.17
+super_nit                   +2851      +2877        -26        -26       46  -0.57
+
+avg Δ across opps: -27 chips/opp
+sum Δ: -216
+worst opp: limp_machine Δ=-56 σ=-1.17
+
+Saved: harness/results/gate_DE_skantbot8_1_vs_skantbot8_heldout_v81.json
+
+Gate verdict (heldout_v81): rule = avg_delta > 0 OR no >2σ regression
+✓ PASS  (avg_delta=-27, n_regressions=0)
+
+
+=== Gate F: skantbot8.1 vs maniac/super_nit HU ===
+  cmd: .venv/bin/python -c 
+import sys; sys.path.insert(0, ".")
+from harness.match_runner import compare
+OPPS = {"maniac_aggro": "harness/opponents/archetypes/maniac_aggro/bot.py",
+        "super_nit":     "harness/opponents/archetypes/super_nit/bot.py"}
+fails = []
+for o, p in OPPS.items():
+    r13 = compare(bot_a_path="bots/skantbot7.13/bot.py",
+                  bot_b_path="bots/skantbot7.13/bot.py",
+                  opponent_pool={o: p}, n_seeds=100, n_workers=4,
+                  n_hands=400, show_progress=False, mode="hu")[o]
+    r81 = compare(bot_a_path="bots/skantbot8.1/bot.py",
+                  bot_b_path="bots/skantbot8.1/bot.py",
+                  opponent_pool={o: p}, n_seeds=100, n_workers=4,
+                  n_hands=400, show_progress=False, mode="hu")[o]
+    d = r81["a_mean"] - r13["a_mean"]
+    print(f"  vs {o}: 7.13={r13['a_mean']:+.0f} skb81={r81['a_mean']:+.0f} Δ={d:+.0f}")
+    if d < -500:
+        fails.append((o, d))
+if fails:
+    for o, d in fails: print(f"FAIL vs {o}: Δ={d:+.0f}")
+    sys.exit(1)
+print("PASS: no >500 chip regression vs maniac/super_nit")
+
+  vs maniac_aggro: 7.13=+400 skb81=-100 Δ=-500
+  vs super_nit: 7.13=+10000 skb81=+10000 Δ=+0
+PASS: no >500 chip regression vs maniac/super_nit
+
+
+=== Gate C-part1: skantbot8.1 bust survey heldout_v81 (n=100) ===
+  cmd: .venv/bin/python _bust_survey_param.py skantbot8.1 bots/skantbot8.1/bot.py heldout_v81 100
+Surveying skantbot8.1 against heldout_v81 pool (8 opps), 100 matches × 200 hands
+  match 20/100: cum_busts=11, cum_loss=$46,714
+  match 40/100: cum_busts=30, cum_loss=$130,703
+  match 60/100: cum_busts=41, cum_loss=$207,931
+  match 80/100: cum_busts=60, cum_loss=$331,815
+  match 100/100: cum_busts=77, cum_loss=$414,854
+
+skantbot8.1 on heldout_v81: 77 busts, $414,854 loss over 20000 hands
+Saved: harness/results/bust_survey_skantbot8.1_heldout_v81_n100.json
+
+
+=== Gate C-part2: bust class comparison vs 7.13 baseline ===
+  cmd: .venv/bin/python _gate_C_bust_compare.py harness/results/bust_survey_skantbot7.13_heldout_v81_n100.json harness/results/bust_survey_skantbot8.1_heldout_v81_n100.json
+   pct loss:  -0.2%
+
+=== By final_street ===
+street     BASE_n  NEW_n    Δn      BASE_$      NEW_$         Δ$
+preflop         1      1    +0  $    3,701 $    3,701 $       +0
+river          75     74    -1  $  412,011 $  405,837 $   -6,174
+turn            0      2    +2  $        0 $    5,316 $   +5,316
+
+=== By showdown role ===
+showdown                  BASE:   73 ($   401,495)  NEW:   73 ($   402,182)  Δ: +0 (+687)
+fold_or_uncontested       BASE:    3 ($    14,217)  NEW:    4 ($    12,672)  Δ: +1 (-1,545)
+
+=== Gate C check (hero-call proxy: showdown busts) ===
+Showdown bust growth: +0.0% (BASE=73, NEW=73)
+✓ GATE C PASS
+
+
+============================================================
+  POST-SWEEP GATE SUMMARY
+============================================================
+PASSED (10):
+  ✓ Gate A: validator on skantbot8.1/bot.py
+  ✓ Gate A: pytest tests/
+  ✓ Gate A: CRN on skantbot8.1_dev
+  ✓ Gate B: skantbot8.1 vs min_raiser HU >= +5000
+  ✓ Gate D: skantbot8.1 vs 7.13 on TRAIN_EXPANDED_V81 (n=40)
+  ✓ Gate E: skantbot8.1 vs 7.13 on UNSEEN_VALIDATION_V81 (n=40)
+  ✓ Bonus: skantbot8.1 vs skantbot8 on HELDOUT_V81 (n=40)
+  ✓ Gate F: skantbot8.1 vs maniac/super_nit HU
+  ✓ Gate C-part1: skantbot8.1 bust survey heldout_v81 (n=100)
+  ✓ Gate C-part2: bust class comparison vs 7.13 baseline
+
+→ All gates passed. skantbot8.1 is the new ship candidate.

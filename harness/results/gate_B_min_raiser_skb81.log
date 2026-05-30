@@ -1,0 +1,6 @@
+7.13: +7200 ± 473
+skantbot8 (#1 only): +7100 ± 478
+skantbot8.1 (sweep best): +7600 ± 452
+Δ (skb8.1 - skb8)   = +500
+Δ (skb8.1 - 7.13)   = +400
+PASS
